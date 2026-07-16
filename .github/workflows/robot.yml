@@ -28,4 +28,5 @@ jobs:
           MODO_EJECUCION: ${{ github.event.client_payload.modo_ejecucion }}
           ID_CARPETA: ${{ github.event.client_payload.id_carpeta }}
           ID_SHEET: ${{ github.event.client_payload.id_sheet }}
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
         run: Rscript director.R
