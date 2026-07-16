@@ -7,9 +7,21 @@ library(googlesheets4)
 library(dplyr)
 library(stringr)
 
-# Autenticación temporal
-drive_auth(email = "oedgargs89pico@gmail.com")
-gs4_auth(email = "oedgargs89pico@gmail.com") 
+# ====================================================================================
+# AUTENTICACIÓN INTELIGENTE (Nube vs Local)
+# ====================================================================================
+llave_json <- Sys.getenv("GCP_CREDENTIALS")
+
+if (llave_json != "") {
+  cat("🔐 Detectado entorno de nube: Autenticando con Cédula Robótica...\n")
+  writeLines(llave_json, "service_account.json")
+  drive_auth(path = "service_account.json")
+  gs4_auth(path = "service_account.json")
+} else {
+  cat("💻 Detectado entorno local: Autenticando con cuenta de usuario...\n")
+  drive_auth(email = "oedgargs89pico@gmail.com")
+  gs4_auth(email = "oedgargs89pico@gmail.com") 
+}
 
 # CONTRATACIÓN DE TRABAJADORES
 source("trabajadores/trabajador1_embarazadas.R")
