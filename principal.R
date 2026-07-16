@@ -1,18 +1,17 @@
 # ====================================================================================
-# CEREBRO CENTRAL - AUTOMATIZACIÓN DE SALA SITUACIONAL (NIVEL OPERATIVO - UNIDADES DE SALUD)
+# CEREBRO CENTRAL - AUTOMATIZACIÓN DE SALA SITUACIONAL (NIVEL OPERATIVO)
 # ====================================================================================
 
-# 1. LIBRERÍAS NECESARIAS
 library(googledrive)
 library(googlesheets4)
 library(dplyr)
 library(stringr)
 
-# 2. AUTENTICACIÓN AUTOMÁTICA
+# Autenticación temporal
 drive_auth(email = "oedgargs89pico@gmail.com")
 gs4_auth(email = "oedgargs89pico@gmail.com") 
 
-# 3. CONTRATACIÓN DE TRABAJADORES (Solo el Pelotón Operativo de 13)
+# CONTRATACIÓN DE TRABAJADORES
 source("trabajadores/trabajador1_embarazadas.R")
 source("trabajadores/trabajador2_general.R")
 source("trabajadores/trabajador3_edades.R")
@@ -28,29 +27,36 @@ source("trabajadores/trabajador11_EstadoNutricional.R")
 source("trabajadores/trabajador12_Violencia.R")
 source("trabajadores/trabajador13_AdolescentesRiesgo.R")
 
-# 4. FUNCIÓN MAESTRA (EL DIRECTOR DE ORQUESTA)
-ejecutar_sala_situacional_maestra <- function(oficina_actual, id_google_sheet, modo = "ultimo") {
-  
+# FUNCIÓN MAESTRA EN LA NUBE
+ejecutar_sala_situacional_maestra <- function() {
   tryCatch({
+    # --- ATRAPAR LOS DATOS QUE ENVÍA GOOGLE SHEETS ---
+    modo <- Sys.getenv("MODO_EJECUCION")
+    id_carpeta_raiz <- Sys.getenv("ID_CARPETA")
+    id_google_sheet <- Sys.getenv("ID_SHEET")
+    
+    if(modo == "") modo <- "ultimo"
+    if(id_carpeta_raiz == "") stop("Falta el ID de la carpeta raíz de Google Drive.")
+    
     cat("\n======================================================\n")
-    cat("🚀 INICIANDO CEREBRO PARA:", oficina_actual, "| MODO:", toupper(modo), "\n")
+    cat("🚀 INICIANDO CEREBRO | MODO:", toupper(modo), "\n")
     
-    # --- A. GPS INTELIGENTE EN GOOGLE DRIVE ---
-    anio_buscado <- as.numeric(format(Sys.Date(), "%Y"))
-    ruta_anio <- paste0("oficinas_tecnicas/", oficina_actual, "/base_de_datos/", anio_buscado, "/")
-    cat("📍 Escaneando Drive:", ruta_anio, "\n")
+    # --- GPS INTELIGENTE: BUSCAR CARPETA 2026 ---
+    anio_buscado <- as.character(format(Sys.Date(), "%Y"))
+    cat("📍 Buscando el año:", anio_buscado, "dentro de la carpeta raíz...\n")
     
-    carpetas_meses <- drive_ls(path = ruta_anio, type = "folder")
-    if(nrow(carpetas_meses) == 0) stop("No hay carpetas de meses en este año.")
+    carpetas_raiz <- drive_ls(as_id(id_carpeta_raiz), type = "folder")
+    carpeta_anio <- carpetas_raiz %>% filter(name == anio_buscado)
     
-    carpetas_meses <- carpetas_meses %>% arrange(name) 
+    if(nrow(carpeta_anio) == 0) stop(paste("No se encontró la carpeta", anio_buscado))
     
-    # --- B. DETECCIÓN DE MESES CON DATOS DISPONIBLES ---
+    # --- BUSCAR MESES (01_enero, 02_febrero, etc) ---
+    carpetas_meses <- drive_ls(as_id(carpeta_anio$id[1]), type = "folder") %>% arrange(name)
+    if(nrow(carpetas_meses) == 0) stop("No hay carpetas de meses.")
+    
     lista_archivos_validos <- list()
     for (i in 1:nrow(carpetas_meses)) {
-      ruta_mes <- paste0(ruta_anio, carpetas_meses$name[i])
-      archivos_csv <- drive_ls(path = ruta_mes, type = "csv")
-      
+      archivos_csv <- drive_ls(as_id(carpetas_meses$id[i]), type = "csv")
       if(nrow(archivos_csv) > 0) {
         mes_num <- as.numeric(str_extract(carpetas_meses$name[i], "^\\d+"))
         lista_archivos_validos[[length(lista_archivos_validos) + 1]] <- list(
@@ -61,88 +67,50 @@ ejecutar_sala_situacional_maestra <- function(oficina_actual, id_google_sheet, m
       }
     }
     
-    if(length(lista_archivos_validos) == 0) stop("Ninguna carpeta tiene archivos CSV subidos.")
-    
-    # Aplicar la lógica del modo (Todos vs Último)
+    if(length(lista_archivos_validos) == 0) stop("Ningún mes tiene archivos CSV.")
     if (modo == "ultimo") {
       lista_archivos_validos <- list(lista_archivos_validos[[length(lista_archivos_validos)]])
-      cat("🔍 MODO ÚLTIMO: Detectado el mes", lista_archivos_validos[[1]]$carpeta, "como el más reciente.\n")
-    } else {
-      cat("📚 MODO TODOS: Se procesarán", length(lista_archivos_validos), "meses históricos.\n")
     }
     
-    # --- C. BUCLE DE PROCESAMIENTO (Itera mes por mes) ---
+    # --- BUCLE DE PROCESAMIENTO ---
     for (item in lista_archivos_validos) {
       mes_objetivo <- item$mes_numero
       carpeta_actual <- item$carpeta
       archivos_del_mes <- item$archivos
       
-      cat("\n⚙️ Descargando y fusionando datos de:", carpeta_actual, "...\n")
+      cat("\n⚙️ Descargando datos de:", carpeta_actual, "...\n")
       cubeta_de_datos <- list()
       
       for (i in 1:nrow(archivos_del_mes)) {
         archivo_actual <- archivos_del_mes[i, ]
         nombre_temporal <- paste0("archivo_temp_", i, ".csv")
-        suppressMessages(drive_download(file = archivo_actual, path = nombre_temporal, overwrite = TRUE))
+        suppressMessages(drive_download(as_id(archivo_actual$id), path = nombre_temporal, overwrite = TRUE))
         cubeta_de_datos[[i]] <- read.csv(nombre_temporal, sep = ",", fileEncoding = "latin1")
       }
       
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
-      cat("✅ Registros listos para", carpeta_actual, ":", nrow(base_mensual_consolidada), "\n")
+      cat("✅ Registros listos:", nrow(base_mensual_consolidada), "\n")
       
-      # --- EJECUCIÓN DE TRABAJADORES CONSOLIDADOS ---
-      trabajador1_Embarazadas(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador2_General(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador3_Edades(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador4_LugarAtencion(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador5_MorbilidadPrevencion(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador6_CronicasCIE10(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador6_1_CronicasGenero(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador7_CoberturaAtenciones(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador8_InterculturalidadTotal(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador9_PerfilEpidemiologico(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador10_Discapacidades(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador11_EstadoNutricional(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador12_Violencia(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
-      trabajador13_AdolescentesRiesgo(base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      Sys.sleep(3)
+      # Ejecución de los 13 escuadrones
+      trabajador1_Embarazadas(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador2_General(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador3_Edades(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador4_LugarAtencion(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador5_MorbilidadPrevencion(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador6_CronicasCIE10(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador6_1_CronicasGenero(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador7_CoberturaAtenciones(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador8_InterculturalidadTotal(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador9_PerfilEpidemiologico(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador10_Discapacidades(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador11_EstadoNutricional(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador12_Violencia(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      trabajador13_AdolescentesRiesgo(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
     }
-    
-    cat("\n🎉 ¡SISTEMA ACTUALIZADO CON ÉXITO PARA:", oficina_actual, "!\n")
-    
+    cat("\n🎉 ¡SISTEMA ACTUALIZADO CON ÉXITO!\n")
   }, error = function(e) {
-    cat("\n🛑 ALERTA CRÍTICA EN EL SISTEMA:", e$message, "\n")
+    cat("\n🛑 ALERTA CRÍTICA:", e$message, "\n")
   })
 }
 
-# ====================================================================================
-# DISPARADOR DE ACTUALIZACIÓN (NIVEL OPERATIVO)
-# ====================================================================================
-
-catálogo_oficinas <- data.frame(
-  oficina = c("Oficina_Tecnica_18D01"),
-  sheet_id = c("1L_ANGWvYeTmZilNYFYZ1vsFtaTqElwOWmjk6x0xEJcI"), 
-  stringsAsFactors = FALSE
-)
-
-modo_ejecucion <- "ultimo" 
-
-for (i in 1:nrow(catálogo_oficinas)) {
-  oficina_v <- catálogo_oficinas$oficina[i]
-  sheet_v <- catálogo_oficinas$sheet_id[i]
-  
-  ejecutar_sala_situacional_maestra(oficina_actual = oficina_v, id_google_sheet = sheet_v, modo = modo_ejecucion)
-}
+ejecutar_sala_situacional_maestra()
