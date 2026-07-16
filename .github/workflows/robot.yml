@@ -24,4 +24,8 @@ jobs:
         shell: Rscript {0}
 
       - name: 4. Ejecutar al Director de Orquesta
+        env:
+          MODO_EJECUCION: ${{ github.event.client_payload.modo_ejecucion }}
+          ID_CARPETA: ${{ github.event.client_payload.id_carpeta }}
+          ID_SHEET: ${{ github.event.client_payload.id_sheet }}
         run: Rscript director.R
