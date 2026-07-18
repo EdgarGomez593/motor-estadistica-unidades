@@ -102,3 +102,4 @@ trabajador10_Discapacidades <- function(tabla_consolidada, id_google_sheet, mes_
   range_write(ss = id_google_sheet, data = df_etnia, range = "DISCAPACIDADES!AE16", col_names = FALSE, reformat = FALSE)
   
   cat("✅ Trabajador 10 finalizado. Matrices de discapacidades actualizadas.\n")
+  }
