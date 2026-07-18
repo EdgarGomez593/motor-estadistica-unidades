@@ -194,25 +194,26 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
     }
     
 # ====================================================================
-    # FILTRO PURIFICADOR: Forzar a numérico antes de enviar
+    # FILTRO PURIFICADOR QUIRÚRGICO (Respeta las letras de CIE10 y Diagnóstico)
     # ====================================================================
     
     # 1. Purificar Top 100
     df_100_demografica <- as.data.frame(matriz_100_demografica)
-    df_100_demografica[] <- lapply(df_100_demografica, as.numeric)
+    # El secreto: [, 3:ncol(...)] aplica la limpieza solo desde la 3ra columna (Enero Hombre)
+    df_100_demografica[, 3:ncol(df_100_demografica)] <- lapply(df_100_demografica[, 3:ncol(df_100_demografica)], as.numeric)
     
     df_100_etnias <- as.data.frame(matriz_100_etnias)
-    df_100_etnias[] <- lapply(df_100_etnias, as.numeric)
+    df_100_etnias[] <- lapply(df_100_etnias, as.numeric) # (Etnia son puros números, se limpia completo)
     
     # 2. Purificar Top 10
     df_10_E <- as.data.frame(matriz_10_E)
-    df_10_E[] <- lapply(df_10_E, as.numeric)
+    df_10_E[, 3:ncol(df_10_E)] <- lapply(df_10_E[, 3:ncol(df_10_E)], as.numeric)
     
     df_10_N <- as.data.frame(matriz_10_N)
-    df_10_N[] <- lapply(df_10_N, as.numeric)
+    df_10_N[, 3:ncol(df_10_N)] <- lapply(df_10_N[, 3:ncol(df_10_N)], as.numeric)
     
     df_10_P <- as.data.frame(matriz_10_P)
-    df_10_P[] <- lapply(df_10_P, as.numeric)
+    df_10_P[, 3:ncol(df_10_P)] <- lapply(df_10_P[, 3:ncol(df_10_P)], as.numeric)
 
 
     # ====================================================================
