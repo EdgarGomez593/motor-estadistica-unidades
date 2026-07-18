@@ -105,19 +105,34 @@ v_Nac   <- formatear_ceros_vector(cN)
 v_Pueb  <- formatear_ceros_vector(cP)
 
 # ====================================================================
-# 5. ESCRITURA MÚLTIPLE EN GOOGLE SHEETS
+# FILTRO PURIFICADOR: Variables de Interculturalidad
 # ====================================================================
-# En R, le enviamos toda la columna junta y él la pega hacia abajo de golpe
 
-# Escritura para el Mes Actual (Columna destino)
-range_write(ss = id_google_sheet, data = data.frame(v_Etnia), range = paste0("Censo_Obstetrico!", letra_col, "24"), col_names = FALSE, reformat = FALSE)
-range_write(ss = id_google_sheet, data = data.frame(v_Nac),   range = paste0("Censo_Obstetrico!", letra_col, "37"), col_names = FALSE, reformat = FALSE)
-range_write(ss = id_google_sheet, data = data.frame(v_Pueb),  range = paste0("Censo_Obstetrico!", letra_col, "47"), col_names = FALSE, reformat = FALSE)
+# 1. Purificar Etnia
+df_Etnia <- data.frame(v_Etnia)
+df_Etnia[] <- lapply(df_Etnia, as.numeric)
+
+# 2. Purificar Nacionalidad
+df_Nac <- data.frame(v_Nac)
+df_Nac[] <- lapply(df_Nac, as.numeric)
+
+# 3. Purificar Pueblo
+df_Pueb <- data.frame(v_Pueb)
+df_Pueb[] <- lapply(df_Pueb, as.numeric)
+
+# ====================================================================
+# 5. ESCRITURA MÚLTIPLE EN GOOGLE SHEETS (Con números puros)
+# ====================================================================
+
+# Escritura para el Mes Actual (Columna destino dinámica)
+range_write(ss = id_google_sheet, data = df_Etnia, range = paste0("Censo_Obstetrico!", letra_col, "24"), col_names = FALSE, reformat = FALSE)
+range_write(ss = id_google_sheet, data = df_Nac,   range = paste0("Censo_Obstetrico!", letra_col, "37"), col_names = FALSE, reformat = FALSE)
+range_write(ss = id_google_sheet, data = df_Pueb,  range = paste0("Censo_Obstetrico!", letra_col, "47"), col_names = FALSE, reformat = FALSE)
 
 # Escritura del Resumen Final (Columna Q, correspondiente al último mes)
-range_write(ss = id_google_sheet, data = data.frame(v_Etnia), range = paste0("Censo_Obstetrico!", letra_resumen, "24"), col_names = FALSE, reformat = FALSE)
-range_write(ss = id_google_sheet, data = data.frame(v_Nac),   range = paste0("Censo_Obstetrico!", letra_resumen, "37"), col_names = FALSE, reformat = FALSE)
-range_write(ss = id_google_sheet, data = data.frame(v_Pueb),  range = paste0("Censo_Obstetrico!", letra_resumen, "47"), col_names = FALSE, reformat = FALSE)
+range_write(ss = id_google_sheet, data = df_Etnia, range = paste0("Censo_Obstetrico!", letra_resumen, "24"), col_names = FALSE, reformat = FALSE)
+range_write(ss = id_google_sheet, data = df_Nac,   range = paste0("Censo_Obstetrico!", letra_resumen, "37"), col_names = FALSE, reformat = FALSE)
+range_write(ss = id_google_sheet, data = df_Pueb,  range = paste0("Censo_Obstetrico!", letra_resumen, "47"), col_names = FALSE, reformat = FALSE)
 
-cat("✅ Trabajador 3 finalizado. Matriz de interculturalidad actualizada.\n")
+cat("✅ Trabajador 3 finalizado. Matriz de interculturalidad purificada y actualizada.\n")
 }
