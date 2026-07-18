@@ -86,12 +86,19 @@ trabajador10_Discapacidades <- function(tabla_consolidada, id_google_sheet, mes_
     }
   }
   
-  # 5. ESCRITURA EN EXCEL
-  # Escribe el bloque de Mes (Ej: Fila 16, Columna de Hombres del mes actual)
-  range_write(ss = id_google_sheet, data = as.data.frame(mat_mes), range = paste0("DISCAPACIDADES!", letra_h, "16"), col_names = FALSE, reformat = FALSE)
+# 5. ESCRITURA EN EXCEL
   
-  # Escribe el bloque de Etnia (Fila 16, Columna AE)
-  range_write(ss = id_google_sheet, data = as.data.frame(mat_etnia), range = "DISCAPACIDADES!AE16", col_names = FALSE, reformat = FALSE)
+  # 5.1. Filtro purificador: Convertir a Data Frame y forzar todo a formato numérico
+  df_mes <- as.data.frame(mat_mes)
+  df_mes[] <- lapply(df_mes, as.numeric)
+  
+  df_etnia <- as.data.frame(mat_etnia)
+  df_etnia[] <- lapply(df_etnia, as.numeric)
+
+  # 5.2. Escribe el bloque de Mes (Ej: Fila 16, Columna de Hombres del mes actual)
+  range_write(ss = id_google_sheet, data = df_mes, range = paste0("DISCAPACIDADES!", letra_h, "16"), col_names = FALSE, reformat = FALSE)
+  
+  # 5.3. Escribe el bloque de Etnia (Fila 16, Columna AE)
+  range_write(ss = id_google_sheet, data = df_etnia, range = "DISCAPACIDADES!AE16", col_names = FALSE, reformat = FALSE)
   
   cat("✅ Trabajador 10 finalizado. Matrices de discapacidades actualizadas.\n")
-}
