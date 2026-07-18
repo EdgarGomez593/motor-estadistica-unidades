@@ -193,19 +193,45 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
       matriz_10_P[i, 19] <- fc(row$T10_P_VacioInd_H); matriz_10_P[i, 20] <- fc(row$T10_P_VacioInd_M)
     }
     
-    # --- ESCRITURA MASIVA ---
+# ====================================================================
+    # FILTRO PURIFICADOR: Forzar a numérico antes de enviar
+    # ====================================================================
+    
+    # 1. Purificar Top 100
+    df_100_demografica <- as.data.frame(matriz_100_demografica)
+    df_100_demografica[] <- lapply(df_100_demografica, as.numeric)
+    
+    df_100_etnias <- as.data.frame(matriz_100_etnias)
+    df_100_etnias[] <- lapply(df_100_etnias, as.numeric)
+    
+    # 2. Purificar Top 10
+    df_10_E <- as.data.frame(matriz_10_E)
+    df_10_E[] <- lapply(df_10_E, as.numeric)
+    
+    df_10_N <- as.data.frame(matriz_10_N)
+    df_10_N[] <- lapply(df_10_N, as.numeric)
+    
+    df_10_P <- as.data.frame(matriz_10_P)
+    df_10_P[] <- lapply(df_10_P, as.numeric)
+
+
+    # ====================================================================
+    # ESCRITURA MASIVA (Inyectando solo números puros)
+    # ====================================================================
+    
     # Top 100
-    range_write(ss = id_google_sheet, data = as.data.frame(matriz_100_demografica), range = paste0("PRINCI-MORBI!B", fila_global_100), col_names = FALSE, reformat = FALSE)
-    range_write(ss = id_google_sheet, data = as.data.frame(matriz_100_etnias), range = paste0("PRINCI-MORBI!AF", fila_global_100), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = df_100_demografica, range = paste0("PRINCI-MORBI!B", fila_global_100), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = df_100_etnias, range = paste0("PRINCI-MORBI!AF", fila_global_100), col_names = FALSE, reformat = FALSE)
     
-    # Top 10 (Global y Mes Actual son iguales en esta arquitectura de archivo único)
-    range_write(ss = id_google_sheet, data = as.data.frame(matriz_10_E), range = paste0("PRINCI-MORBI!BK", fila_global_10), col_names = FALSE, reformat = FALSE)
-    range_write(ss = id_google_sheet, data = as.data.frame(matriz_10_N), range = paste0("PRINCI-MORBI!CE", fila_global_10), col_names = FALSE, reformat = FALSE)
-    range_write(ss = id_google_sheet, data = as.data.frame(matriz_10_P), range = paste0("PRINCI-MORBI!CQ", fila_global_10), col_names = FALSE, reformat = FALSE)
+    # Top 10 (Global)
+    range_write(ss = id_google_sheet, data = df_10_E, range = paste0("PRINCI-MORBI!BK", fila_global_10), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = df_10_N, range = paste0("PRINCI-MORBI!CE", fila_global_10), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = df_10_P, range = paste0("PRINCI-MORBI!CQ", fila_global_10), col_names = FALSE, reformat = FALSE)
     
-    range_write(ss = id_google_sheet, data = as.data.frame(matriz_10_E), range = paste0("PRINCI-MORBI!BK", fila_mes_10), col_names = FALSE, reformat = FALSE)
-    range_write(ss = id_google_sheet, data = as.data.frame(matriz_10_N), range = paste0("PRINCI-MORBI!CE", fila_mes_10), col_names = FALSE, reformat = FALSE)
-    range_write(ss = id_google_sheet, data = as.data.frame(matriz_10_P), range = paste0("PRINCI-MORBI!CQ", fila_mes_10), col_names = FALSE, reformat = FALSE)
+    # Top 10 (Mes Actual)
+    range_write(ss = id_google_sheet, data = df_10_E, range = paste0("PRINCI-MORBI!BK", fila_mes_10), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = df_10_N, range = paste0("PRINCI-MORBI!CE", fila_mes_10), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = df_10_P, range = paste0("PRINCI-MORBI!CQ", fila_mes_10), col_names = FALSE, reformat = FALSE)
   }
   
   # 3. EJECUTAR LOS MOTORES
