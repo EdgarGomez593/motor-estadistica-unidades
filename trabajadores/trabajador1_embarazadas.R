@@ -63,14 +63,26 @@ trabajador1_Embarazadas <- function(tabla_consolidada, id_google_sheet, mes_obje
   cat("   -> Total Primeras encontradas:", totalPrimeras, "\n")
   cat("   -> Total Subsecuentes encontradas:", totalSubsecuentes, "\n")
   
-  # 5. ESCRITURA EN EL EXCEL
+# 5. ESCRITURA EN EL EXCEL
   # Armamos el rango (Ej: "Censo_Obstetrico!H2")
   rango_primeras <- paste0("Censo_Obstetrico!", letra_col, "2")
   rango_subsecuentes <- paste0("Censo_Obstetrico!", letra_col, "3")
   
+  # ====================================================================
+  # FILTRO PURIFICADOR: Forzar a numérico antes de enviar
+  # ====================================================================
+  df_primeras <- data.frame(valor_primeras)
+  df_primeras[] <- lapply(df_primeras, as.numeric)
+  
+  df_subsecuentes <- data.frame(valor_subsecuentes)
+  df_subsecuentes[] <- lapply(df_subsecuentes, as.numeric)
+  
+  # ====================================================================
+  # ESCRITURA MASIVA (Inyectando solo números puros)
+  # ====================================================================
   # Inyectamos los datos. 'reformat = FALSE' protege los colores y bordes de tu matriz visual
-  range_write(ss = id_google_sheet, data = data.frame(valor_primeras), range = rango_primeras, col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(valor_subsecuentes), range = rango_subsecuentes, col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = df_primeras, range = rango_primeras, col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = df_subsecuentes, range = rango_subsecuentes, col_names = FALSE, reformat = FALSE)
   
   cat("✅ Trabajador 1 finalizado. Datos guardados en la columna:", letra_col, "\n")
 }
