@@ -1,6 +1,5 @@
 name: Motor R - Sala Situacional
 
-# El robot se despertará cuando reciba una señal externa llamada "ejecutar_sala"
 on:
   repository_dispatch:
     types: [ejecutar_sala]
@@ -17,13 +16,25 @@ jobs:
         uses: r-lib/actions/setup-r@v2
         with:
           r-version: '4.3.0'
+          use-public-rspm: true # 🚀 Truco 1: Descarga librerías ya ensambladas
 
-      - name: 3. Instalar librerías matemáticas y de Google
+      - name: 3. Activar Memoria Caché
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.R_LIBS_USER }}
+          key: ${{ runner.os }}-paquetes-r
+          restore-keys: ${{ runner.os }}-paquetes-r # 🚀 Truco 2: Guardar en el casillero
+
+      - name: 4. Instalar librerías (Solo si no están en caché)
         run: |
-          install.packages(c("googledrive", "googlesheets4", "dplyr", "stringr"))
+          # 🚀 Truco 3: Si ya existe en memoria, salta la instalación
+          if (!require("googledrive", quietly = TRUE)) install.packages("googledrive")
+          if (!require("googlesheets4", quietly = TRUE)) install.packages("googlesheets4")
+          if (!require("dplyr", quietly = TRUE)) install.packages("dplyr")
+          if (!require("stringr", quietly = TRUE)) install.packages("stringr")
         shell: Rscript {0}
 
-      - name: 4. Ejecutar al Director de Orquesta
+      - name: 5. Ejecutar al Director de Orquesta
         env:
           MODO_EJECUCION: ${{ github.event.client_payload.modo_ejecucion }}
           ID_CARPETA: ${{ github.event.client_payload.id_carpeta }}
