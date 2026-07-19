@@ -164,21 +164,28 @@ ejecutar_sala_situacional_maestra <- function() {
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
       cat("✅ Registros listos:", nrow(base_mensual_consolidada), "\n")
       
-      # Ejecución de los 13 escuadrones
-      trabajador1_Embarazadas(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador2_General(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador3_Edades(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador4_LugarAtencion(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador5_MorbilidadPrevencion(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador6_CronicasCIE10(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador6_1_CronicasGenero(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador7_CoberturaAtenciones(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador8_InterculturalidadTotal(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador9_PerfilEpidemiologico(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador10_Discapacidades(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador11_EstadoNutricional(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador12_Violencia(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
-      trabajador13_AdolescentesRiesgo(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(2)
+      # Ejecución de los 13 escuadrones (Con micro-pausa ajustada)
+      cat("🚀 Disparando escuadrones de cálculo...\n")
+      trabajador1_Embarazadas(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador2_General(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador3_Edades(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador4_LugarAtencion(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador5_MorbilidadPrevencion(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador6_CronicasCIE10(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador6_1_CronicasGenero(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador7_CoberturaAtenciones(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador8_InterculturalidadTotal(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador9_PerfilEpidemiologico(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador10_Discapacidades(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador11_EstadoNutricional(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador12_Violencia(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+      trabajador13_AdolescentesRiesgo(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
+
+      # ❄️ SISTEMA DE ENFRIAMIENTO (ANTIBLOQUEO DE GOOGLE) ❄️
+      if (length(lista_archivos_validos) > 1) {
+        cat("❄️ Enfriando motor por 20 segundos para no saturar el servidor de Google Sheets...\n")
+        Sys.sleep(20)
+      }
     }
     cat("\n🎉 ¡SISTEMA ACTUALIZADO CON ÉXITO!\n")
   }, error = function(e) {
