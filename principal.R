@@ -39,52 +39,99 @@ source("trabajadores/trabajador11_EstadoNutricional.R")
 source("trabajadores/trabajador12_Violencia.R")
 source("trabajadores/trabajador13_AdolescentesRiesgo.R")
 
-# FUNCIÓN MAESTRA EN LA NUBE
+# FUNCIÓN MAESTRA EN LA NUBE (VERSIÓN ESCÁNER HÍBRIDO + AUDITORÍA)
 ejecutar_sala_situacional_maestra <- function() {
   tryCatch({
-    # --- ATRAPAR LOS DATOS QUE ENVÍA GOOGLE SHEETS ---
-    modo <- Sys.getenv("MODO_EJECUCION")
+    # --- 1. ATRAPAR LOS DATOS QUE ENVÍA GOOGLE SHEETS ---
+    modo_original <- Sys.getenv("MODO_EJECUCION")
     id_carpeta_raiz <- Sys.getenv("ID_CARPETA")
     id_google_sheet <- Sys.getenv("ID_SHEET")
     
-    if(modo == "") modo <- "ultimo"
+    if(modo_original == "") modo_original <- "ultimo"
     if(id_carpeta_raiz == "") stop("Falta el ID de la carpeta raíz de Google Drive.")
     
-    cat("\n======================================================\n")
-    cat("🚀 INICIANDO CEREBRO | MODO:", toupper(modo), "\n")
+    # --- 2. LÓGICA DE LA MÁQUINA DEL TIEMPO (AUDITORÍA) ---
+    modo <- modo_original
+    anio_auditoria <- ""
     
-    # --- GPS INTELIGENTE: BUSCAR CARPETA 2026 ---
-    anio_buscado <- as.character(format(Sys.Date(), "%Y"))
-    cat("📍 Buscando el año:", anio_buscado, "dentro de la carpeta raíz...\n")
+    # Si Google Sheets envió la palabra secreta "auditoria_2026"
+    if (grepl("auditoria_", modo)) {
+      anio_auditoria <- sub("auditoria_", "", modo)
+      modo <- "todos" # Obligamos a recalcular todo el año auditado
+    }
+    
+    # --- 3. GPS INTELIGENTE: DETERMINAR EL AÑO A BUSCAR ---
+    cat("\n======================================================\n")
+    if(anio_auditoria != "") {
+      anio_buscado <- anio_auditoria
+      cat("🕰️ MODO AUDITORÍA: Viajando en el tiempo al año:", anio_buscado, "\n")
+    } else {
+      anio_buscado <- as.character(format(Sys.Date(), "%Y"))
+      cat("📍 MODO NORMAL: Buscando el año actual:", anio_buscado, "\n")
+    }
     
     carpetas_raiz <- drive_ls(as_id(id_carpeta_raiz), type = "folder")
     carpeta_anio <- carpetas_raiz %>% filter(name == anio_buscado)
     
-    if(nrow(carpeta_anio) == 0) stop(paste("No se encontró la carpeta", anio_buscado))
+    if(nrow(carpeta_anio) == 0) stop(paste("No se encontró la carpeta del año:", anio_buscado))
     
-    # --- BUSCAR MESES (01_enero, 02_febrero, etc) ---
-    carpetas_meses <- drive_ls(as_id(carpeta_anio$id[1]), type = "folder") %>% arrange(name)
-    if(nrow(carpetas_meses) == 0) stop("No hay carpetas de meses.")
+    # --- 4. ESCÁNER DE INFRAESTRUCTURA HÍBRIDA (DISTRITO vs UNIDAD) ---
+    cat("🔍 Analizando estructura interna...\n")
+    subcarpetas_meses <- drive_ls(as_id(carpeta_anio$id[1]), type = "folder") %>% arrange(name)
+    archivos_csv_sueltos <- drive_ls(as_id(carpeta_anio$id[1]), type = "csv")
     
     lista_archivos_validos <- list()
-    for (i in 1:nrow(carpetas_meses)) {
-      archivos_csv <- drive_ls(as_id(carpetas_meses$id[i]), type = "csv")
-      if(nrow(archivos_csv) > 0) {
-        mes_num <- as.numeric(str_extract(carpetas_meses$name[i], "^\\d+"))
-        lista_archivos_validos[[length(lista_archivos_validos) + 1]] <- list(
-          mes_numero = mes_num,
-          carpeta = carpetas_meses$name[i],
-          archivos = archivos_csv
-        )
+    
+    # >> ESCENARIO A: OFICINAS TÉCNICAS (Subcarpetas "01_enero", "02_febrero"...)
+    if (nrow(subcarpetas_meses) > 0) {
+      cat("🏢 Estructura detectada: OFICINA TÉCNICA (Carpetas Mensuales)\n")
+      for (i in 1:nrow(subcarpetas_meses)) {
+        archivos_csv <- drive_ls(as_id(subcarpetas_meses$id[i]), type = "csv")
+        if(nrow(archivos_csv) > 0) {
+          # Extrae el número del nombre de la carpeta (ej: "01" de "01_enero")
+          mes_num <- as.numeric(str_extract(subcarpetas_meses$name[i], "^\\d+"))
+          if(!is.na(mes_num)) {
+            lista_archivos_validos[[length(lista_archivos_validos) + 1]] <- list(
+              mes_numero = mes_num,
+              carpeta = subcarpetas_meses$name[i],
+              archivos = archivos_csv
+            )
+          }
+        }
+      }
+    }
+    # >> ESCENARIO B: UNIDADES DE SALUD (CSVs sueltos PRASS_ENE_2026.csv)
+    else if (nrow(archivos_csv_sueltos) > 0) {
+      cat("🏥 Estructura detectada: UNIDAD DE SALUD (Archivos Sueltos)\n")
+      meses_diccionario <- c("ENE"=1, "FEB"=2, "MAR"=3, "ABR"=4, "MAY"=5, "JUN"=6,
+                             "JUL"=7, "AGO"=8, "SEP"=9, "OCT"=10, "NOV"=11, "DIC"=12)
+      
+      archivos_csv_sueltos$mes_texto <- str_extract(archivos_csv_sueltos$name, "(ENE|FEB|MAR|ABR|MAY|JUN|JUL|AGO|SEP|OCT|NOV|DIC)")
+      archivos_validos <- archivos_csv_sueltos %>% filter(!is.na(mes_texto))
+      
+      if(nrow(archivos_validos) > 0) {
+        archivos_validos$mes_numero <- meses_diccionario[archivos_validos$mes_texto]
+        meses_unicos <- sort(unique(archivos_validos$mes_numero))
+        
+        for (m in meses_unicos) {
+          archivos_del_mes <- archivos_validos %>% filter(mes_numero == m)
+          lista_archivos_validos[[length(lista_archivos_validos) + 1]] <- list(
+            mes_numero = m,
+            carpeta = paste("Mes consolidado:", archivos_del_mes$mes_texto[1]),
+            archivos = archivos_del_mes
+          )
+        }
       }
     }
     
-    if(length(lista_archivos_validos) == 0) stop("Ningún mes tiene archivos CSV.")
+    if(length(lista_archivos_validos) == 0) stop("Ningún mes tiene archivos CSV en la estructura detectada.")
+    
+    # Si pidieron el "ultimo" mes, seleccionamos solo el de más abajo en la lista
     if (modo == "ultimo") {
       lista_archivos_validos <- list(lista_archivos_validos[[length(lista_archivos_validos)]])
     }
     
-    # --- BUCLE DE PROCESAMIENTO ---
+    # --- 5. BUCLE DE PROCESAMIENTO MÁQUINA DE DATOS ---
     for (item in lista_archivos_validos) {
       mes_objetivo <- item$mes_numero
       carpeta_actual <- item$carpeta
