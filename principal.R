@@ -39,7 +39,9 @@ source("trabajadores/trabajador11_EstadoNutricional.R")
 source("trabajadores/trabajador12_Violencia.R")
 source("trabajadores/trabajador13_AdolescentesRiesgo.R")
 
-# FUNCIÓN MAESTRA EN LA NUBE (VERSIÓN ESCÁNER HÍBRIDO + AUDITORÍA)
+# ====================================================================================
+# FUNCIÓN MAESTRA EN LA NUBE (VERSIÓN ESCÁNER HÍBRIDO + BÚNKER NEÓN)
+# ====================================================================================
 ejecutar_sala_situacional_maestra <- function() {
   tryCatch({
     # --- 1. ATRAPAR LOS DATOS QUE ENVÍA GOOGLE SHEETS ---
@@ -50,21 +52,29 @@ ejecutar_sala_situacional_maestra <- function() {
     if(modo_original == "") modo_original <- "ultimo"
     if(id_carpeta_raiz == "") stop("Falta el ID de la carpeta raíz de Google Drive.")
     
-    # --- 2. LÓGICA DE LA MÁQUINA DEL TIEMPO (AUDITORÍA) ---
+    # --- 2. LÓGICA DE LA MÁQUINA DEL TIEMPO (BÚNKER NEÓN) ---
     modo <- modo_original
     anio_auditoria <- ""
+    mes_especifico <- ""
     
-    # Si Google Sheets envió la palabra secreta "auditoria_2026"
+    # Si Google Sheets envió la palabra secreta desde la terminal (ej: "auditoria_2026_5")
     if (grepl("auditoria_", modo)) {
-      anio_auditoria <- sub("auditoria_", "", modo)
-      modo <- "todos" # Obligamos a recalcular todo el año auditado
+      partes <- strsplit(modo, "_")[[1]]
+      anio_auditoria <- partes[2]        # Atrapa el año (ej: "2026")
+      mes_especifico <- partes[3]        # Atrapa el mes (ej: "5" o "todos")
+      
+      if (mes_especifico != "todos") {
+        modo <- "ultimo" # Forzamos la lógica para procesar 1 solo mes
+      } else {
+        modo <- "todos"  # Procesamos el año completo
+      }
     }
     
     # --- 3. GPS INTELIGENTE: DETERMINAR EL AÑO A BUSCAR ---
     cat("\n======================================================\n")
     if(anio_auditoria != "") {
       anio_buscado <- anio_auditoria
-      cat("🕰️ MODO AUDITORÍA: Viajando en el tiempo al año:", anio_buscado, "\n")
+      cat("🕰️ MODO BÚNKER: Viajando en el tiempo al año:", anio_buscado, "\n")
     } else {
       anio_buscado <- as.character(format(Sys.Date(), "%Y"))
       cat("📍 MODO NORMAL: Buscando el año actual:", anio_buscado, "\n")
@@ -75,7 +85,7 @@ ejecutar_sala_situacional_maestra <- function() {
     
     if(nrow(carpeta_anio) == 0) stop(paste("No se encontró la carpeta del año:", anio_buscado))
     
-    # --- 4. ESCÁNER DE INFRAESTRUCTURA HÍBRIDA (DISTRITO vs UNIDAD) ---
+    # --- 4. ESCÁNER DE INFRAESTRUCTURA HÍBRIDA ---
     cat("🔍 Analizando estructura interna...\n")
     subcarpetas_meses <- drive_ls(as_id(carpeta_anio$id[1]), type = "folder") %>% arrange(name)
     archivos_csv_sueltos <- drive_ls(as_id(carpeta_anio$id[1]), type = "csv")
@@ -88,7 +98,6 @@ ejecutar_sala_situacional_maestra <- function() {
       for (i in 1:nrow(subcarpetas_meses)) {
         archivos_csv <- drive_ls(as_id(subcarpetas_meses$id[i]), type = "csv")
         if(nrow(archivos_csv) > 0) {
-          # Extrae el número del nombre de la carpeta (ej: "01" de "01_enero")
           mes_num <- as.numeric(str_extract(subcarpetas_meses$name[i], "^\\d+"))
           if(!is.na(mes_num)) {
             lista_archivos_validos[[length(lista_archivos_validos) + 1]] <- list(
@@ -126,12 +135,17 @@ ejecutar_sala_situacional_maestra <- function() {
     
     if(length(lista_archivos_validos) == 0) stop("Ningún mes tiene archivos CSV en la estructura detectada.")
     
-    # Si pidieron el "ultimo" mes, seleccionamos solo el de más abajo en la lista
-    if (modo == "ultimo") {
+    # --- 5. FILTROS DE TIEMPO (BÚNKER O NORMAL) ---
+    # Si estamos en modo Búnker y pidieron un mes específico
+    if (mes_especifico != "" && mes_especifico != "todos") {
+      lista_archivos_validos <- lista_archivos_validos[sapply(lista_archivos_validos, function(x) x$mes_numero == as.numeric(mes_especifico))]
+      if(length(lista_archivos_validos) == 0) stop("La carpeta del año existe, pero no hay datos CSV para el mes seleccionado.")
+    } else if (modo == "ultimo") {
+      # Si estamos en modo normal jalamos solo el mes más reciente
       lista_archivos_validos <- list(lista_archivos_validos[[length(lista_archivos_validos)]])
     }
     
-    # --- 5. BUCLE DE PROCESAMIENTO MÁQUINA DE DATOS ---
+    # --- 6. BUCLE DE PROCESAMIENTO A LOS TRABAJADORES ---
     for (item in lista_archivos_validos) {
       mes_objetivo <- item$mes_numero
       carpeta_actual <- item$carpeta
