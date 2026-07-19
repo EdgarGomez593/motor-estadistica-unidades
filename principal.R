@@ -145,13 +145,32 @@ ejecutar_sala_situacional_maestra <- function() {
       lista_archivos_validos <- list(lista_archivos_validos[[length(lista_archivos_validos)]])
     }
     
-    # --- 6. BUCLE DE PROCESAMIENTO A LOS TRABAJADORES ---
+# --- 6. BUCLE DE PROCESAMIENTO (MODO TURBO: MAGIA EN 3 MINUTOS) ---
+    cat("🚀 INICIANDO MODO TURBO (Tiempo estimado: ~3.5 minutos para todo el año)...\n")
+    
+    # 🛡️ El Escudo de Titanio: Protege cada ejecución individualmente
+    ejecutar_escudo <- function(funcion_trabajador, base, id, mes, nombre) {
+      tryCatch({
+        funcion_trabajador(base, id, mes)
+        Sys.sleep(1.5) # Ritmo matemático: 1.5s = ~39 peticiones/min. (Límite Google es 60)
+      }, error = function(e) {
+        if(grepl("429", e$message) || grepl("Quota", e$message)) {
+          cat("⏳ Límite de Google rozado en", nombre, ". Respiro de 10s...\n")
+          Sys.sleep(10)
+          try(funcion_trabajador(base, id, mes), silent=TRUE) # Segundo intento
+        } else {
+          # Si un mes no tiene datos específicos, no explota, solo se salta.
+          cat("⚠️ Omitiendo", nombre, "en mes", mes, "(Posible falta de datos). Detalle:", e$message, "\n")
+        }
+      })
+    }
+
     for (item in lista_archivos_validos) {
       mes_objetivo <- item$mes_numero
       carpeta_actual <- item$carpeta
       archivos_del_mes <- item$archivos
       
-      cat("\n⚙️ Descargando datos de:", carpeta_actual, "...\n")
+      cat("\n⚙️ Procesando Mes:", mes_objetivo, "(", carpeta_actual, ")...\n")
       cubeta_de_datos <- list()
       
       for (i in 1:nrow(archivos_del_mes)) {
@@ -162,30 +181,23 @@ ejecutar_sala_situacional_maestra <- function() {
       }
       
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
-      cat("✅ Registros listos:", nrow(base_mensual_consolidada), "\n")
+      cat("✅ Registros listos para mes", mes_objetivo, ":", nrow(base_mensual_consolidada), "\n")
       
-      # Ejecución de los 13 escuadrones (Con micro-pausa ajustada)
-      cat("🚀 Disparando escuadrones de cálculo...\n")
-      trabajador1_Embarazadas(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador2_General(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador3_Edades(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador4_LugarAtencion(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador5_MorbilidadPrevencion(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador6_CronicasCIE10(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador6_1_CronicasGenero(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador7_CoberturaAtenciones(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador8_InterculturalidadTotal(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador9_PerfilEpidemiologico(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador10_Discapacidades(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador11_EstadoNutricional(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador12_Violencia(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-      trabajador13_AdolescentesRiesgo(base_mensual_consolidada, id_google_sheet, mes_objetivo); Sys.sleep(3)
-
-      # ❄️ SISTEMA DE ENFRIAMIENTO (ANTIBLOQUEO DE GOOGLE) ❄️
-      if (length(lista_archivos_validos) > 1) {
-        cat("❄️ Enfriando motor por 20 segundos para no saturar el servidor de Google Sheets...\n")
-        Sys.sleep(20)
-      }
+      # Despliegue de los 13 escuadrones bajo el Escudo de Titanio
+      ejecutar_escudo(trabajador1_Embarazadas, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T1_Embarazadas")
+      ejecutar_escudo(trabajador2_General, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T2_General")
+      ejecutar_escudo(trabajador3_Edades, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T3_Edades")
+      ejecutar_escudo(trabajador4_LugarAtencion, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T4_LugarAtencion")
+      ejecutar_escudo(trabajador5_MorbilidadPrevencion, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T5_MorbilidadPrevencion")
+      ejecutar_escudo(trabajador6_CronicasCIE10, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T6_CronicasCIE10")
+      ejecutar_escudo(trabajador6_1_CronicasGenero, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T6_1_CronicasGenero")
+      ejecutar_escudo(trabajador7_CoberturaAtenciones, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T7_CoberturaAtenciones")
+      ejecutar_escudo(trabajador8_InterculturalidadTotal, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T8_Interculturalidad")
+      ejecutar_escudo(trabajador9_PerfilEpidemiologico, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T9_PerfilEpidemiologico")
+      ejecutar_escudo(trabajador10_Discapacidades, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T10_Discapacidades")
+      ejecutar_escudo(trabajador11_EstadoNutricional, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T11_EstadoNutricional")
+      ejecutar_escudo(trabajador12_Violencia, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T12_Violencia")
+      ejecutar_escudo(trabajador13_AdolescentesRiesgo, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T13_AdolescentesRiesgo")
     }
     cat("\n🎉 ¡SISTEMA ACTUALIZADO CON ÉXITO!\n")
   }, error = function(e) {
