@@ -177,20 +177,13 @@ ejecutar_sala_situacional_maestra <- function() {
       
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
       
-      # 🛡️ FILTRO ESTRICTO DE ROLES MÉDICOS PRIMARIOS
-      # Bloquea perfiles no requeridos (Odontología, Enfermería, Psicología) para asegurar pureza estadística.
-      nombres_cols_temp <- names(base_mensual_consolidada)
-      if("PROF_ESP_ATE" %in% nombres_cols_temp) {
-        base_mensual_consolidada <- base_mensual_consolidada %>%
-          filter(!str_detect(toupper(PROF_ESP_ATE), "ODONTO|ENFERMER|PSICOLOG"))
-      }
-      
-      # 📥 ALMACENAMIENTO EN LA BÓVEDA ANUAL
+      # 📥 ALMACENAMIENTO EN LA BÓVEDA ANUAL (Pasa TODO el flujo, incluyendo Odontología)
       base_mensual_consolidada$MES_ORIGEN <- mes_objetivo
       lista_anual_t9[[length(lista_anual_t9) + 1]] <- base_mensual_consolidada
       
       cat("✅ Registros listos para mes", mes_objetivo, ":", nrow(base_mensual_consolidada), "\n")
       
+      # Despliegue completo de los escuadrones sin restricciones
       ejecutar_escudo(trabajador1_Embarazadas, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T1_Embarazadas")
       ejecutar_escudo(trabajador2_General, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T2_General")
       ejecutar_escudo(trabajador3_Edades, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T3_Edades")
