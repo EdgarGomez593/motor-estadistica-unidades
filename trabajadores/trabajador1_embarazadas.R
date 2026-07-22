@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 1: CENSO OBSTÉTRICO (CONTROL PRENATAL E INTERCULTURALIDAD)
-# Arquitectura: Base Completa -> Conteo Censo -> Búsqueda Exacta (==) Demográfica
+# Arquitectura: Búsqueda Exacta con Comodín Regex (.) Anti-Corrupción
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -10,8 +10,7 @@ trabajador1_Embarazadas <- function(tabla_consolidada, id_google_sheet, mes_obje
   cat("🤰 Trabajador 1 activado: Calculando Censo Obstétrico y Demografía...\n")
   
   # 1. MAPA DE COLUMNAS FRANCOTIRADOR
-  mes_anterior <- mes_objetivo
-  col_destino_num <- mes_anterior + 1
+  col_destino_num <- mes_objetivo + 1
   letras_columnas <- c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M")
   letra_col <- letras_columnas[col_destino_num]
   
@@ -26,21 +25,13 @@ trabajador1_Embarazadas <- function(tabla_consolidada, id_google_sheet, mes_obje
   if (!"PCTE_NAC_ETN" %in% nombres_cols) tabla_consolidada$PCTE_NAC_ETN <- ""
   if (!"PCTE_PUEBLO" %in% nombres_cols) tabla_consolidada$PCTE_PUEBLO <- ""
   
-  # 3. FILTRADO QUIRÚRGICO (Ahora rescatamos las columnas interculturales)
+  # 3. FILTRADO QUIRÚRGICO DE EMBARAZADAS (Z321, Z34, Z35)
   datos_filtrados <- tabla_consolidada %>%
-    select(
-      CIE = ATEMED_CIE10, 
-      TIP = all_of(col_tipo_diag), 
-      CRO = ATEMED_CRON_DIAG,
-      ETN = PCTE_AUTID_ETN,
-      NAC = PCTE_NAC_ETN,
-      PUE = PCTE_PUEBLO
-    ) %>%
+    select(CIE = ATEMED_CIE10, TIP = all_of(col_tipo_diag), CRO = ATEMED_CRON_DIAG, ETN = PCTE_AUTID_ETN, NAC = PCTE_NAC_ETN, PUE = PCTE_PUEBLO) %>%
     mutate(
       CIE = str_remove_all(str_trim(toupper(CIE)), "[\r\n\"\\.]"),
       TIP = str_remove_all(str_trim(toupper(TIP)), "[\r\n\"]"),
       CRO = str_remove_all(str_trim(toupper(CRO)), "[\r\n\"]"),
-      # Normalizamos las etnias pero mantenemos tildes y barras
       ETN = str_squish(str_remove_all(toupper(ETN), "[\r\n\"]")),
       NAC = str_squish(str_remove_all(toupper(NAC), "[\r\n\"]")),
       PUE = str_squish(str_remove_all(toupper(PUE), "[\r\n\"]"))
@@ -60,24 +51,24 @@ trabajador1_Embarazadas <- function(tabla_consolidada, id_google_sheet, mes_obje
   df_subsecuentes <- data.frame(VALOR = ifelse(totalSubsecuentes > 0, totalSubsecuentes, ""))
   
   # ====================================================================
-  # 5. CONTEO DEMOGRÁFICO DE EMBARAZADAS (BÚSQUEDA EXACTA MILIMÉTRICA)
+  # 5. CONTEO DEMOGRÁFICO ROBUSTO (Con Comodín '.' para esquivar errores)
   # ====================================================================
   
-  # --- Bloque 1: Etnias (Mapeado exacto a Filas 24-33) ---
+  # --- Bloque 1: Etnias (Filas 24-33) ---
   etn_embarazadas <- c(
-    sum(datos_filtrados$ETN == "AFROECUATORIANO/AFRODESCENDIENTE", na.rm=TRUE), # 24
-    sum(datos_filtrados$ETN == "BLANCO/A", na.rm=TRUE),                         # 25
-    sum(datos_filtrados$ETN == "INDÍGENA", na.rm=TRUE),                         # 26
-    sum(datos_filtrados$ETN == "MESTIZO/A", na.rm=TRUE),                        # 27
-    sum(datos_filtrados$ETN == "MONTUBIO/A", na.rm=TRUE),                       # 28
-    sum(datos_filtrados$ETN == "MULATO/A", na.rm=TRUE),                         # 29
-    sum(datos_filtrados$ETN == "NEGRO/A", na.rm=TRUE),                          # 30
-    sum(datos_filtrados$ETN == "NO APLICA", na.rm=TRUE),                        # 31
-    sum(datos_filtrados$ETN == "NO SABE/NO RESPONDE", na.rm=TRUE),              # 32
-    sum(datos_filtrados$ETN == "OTRO/A", na.rm=TRUE)                            # 33
+    sum(str_detect(datos_filtrados$ETN, "AFRO"), na.rm=TRUE),                   # 24
+    sum(str_detect(datos_filtrados$ETN, "BLANC"), na.rm=TRUE),                  # 25
+    sum(str_detect(datos_filtrados$ETN, "IND.GENA"), na.rm=TRUE),               # 26 (¡MAGIA! Atrapa con o sin tilde)
+    sum(str_detect(datos_filtrados$ETN, "MESTIZ"), na.rm=TRUE),                 # 27
+    sum(str_detect(datos_filtrados$ETN, "MONTUB|MONTUV"), na.rm=TRUE),          # 28
+    sum(str_detect(datos_filtrados$ETN, "MULAT"), na.rm=TRUE),                  # 29
+    sum(str_detect(datos_filtrados$ETN, "NEGR"), na.rm=TRUE),                   # 30
+    sum(str_detect(datos_filtrados$ETN, "APLICA"), na.rm=TRUE),                 # 31
+    sum(str_detect(datos_filtrados$ETN, "SABE|RESPONDE"), na.rm=TRUE),          # 32
+    sum(str_detect(datos_filtrados$ETN, "OTR"), na.rm=TRUE)                     # 33
   )
   
-  # --- Bloque 2: Nacionalidad (Mapeado exacto a Filas 37-43) ---
+  # --- Bloque 2: Nacionalidad (Filas 37-43) ---
   nac_embarazadas <- c(
     sum(str_detect(datos_filtrados$NAC, "ACHUAR"), na.rm=TRUE),                 # 37
     sum(str_detect(datos_filtrados$NAC, "ANDOA"), na.rm=TRUE),                  # 38
@@ -88,10 +79,18 @@ trabajador1_Embarazadas <- function(tabla_consolidada, id_google_sheet, mes_obje
     sum(str_detect(datos_filtrados$NAC, "WAORANI|HUAORANI"), na.rm=TRUE)        # 43
   )
   
-  # --- Bloque 3: Pueblo (Mapeado exacto a Filas 47 y 48) ---
+  # --- Bloque 3: Pueblo (Filas 47-56) ---
   pue_embarazadas <- c(
     sum(str_detect(datos_filtrados$PUE, "CHIBULEO"), na.rm=TRUE),               # 47
-    sum(str_detect(datos_filtrados$PUE, "TOMABELA"), na.rm=TRUE)                # 48
+    sum(str_detect(datos_filtrados$PUE, "TOMABELA"), na.rm=TRUE),               # 48
+    sum(str_detect(datos_filtrados$PUE, "KA.ARI|KANARI"), na.rm=TRUE),          # 49 (Comodín en la Ñ)
+    sum(str_detect(datos_filtrados$PUE, "KARANKI"), na.rm=TRUE),                # 50
+    sum(str_detect(datos_filtrados$PUE, "KAYAMBI"), na.rm=TRUE),                # 51
+    sum(str_detect(datos_filtrados$PUE, "AMAZ.NIC"), na.rm=TRUE),               # 52 (Comodín en Amazónico)
+    sum(str_detect(datos_filtrados$PUE, "KISAPINCHA|QUISAPINCHA"), na.rm=TRUE), # 53
+    sum(str_detect(datos_filtrados$PUE, "NATABUELA"), na.rm=TRUE),              # 54
+    sum(str_detect(datos_filtrados$PUE, "SABE|RESPONDE"), na.rm=TRUE),          # 55
+    sum(str_detect(datos_filtrados$PUE, "OTAVALO"), na.rm=TRUE)                 # 56
   )
   
   # Transformación limpia (Oculta los ceros para mantener la hoja impecable)
