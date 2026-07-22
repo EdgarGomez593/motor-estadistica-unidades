@@ -1,15 +1,13 @@
 # ====================================================================================
-# TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO (VISIÓN ANUAL + MEDICINA Y ODONTOLOGÍA)
-# Arquitectura: Base Anual -> Ranking Inamovible -> Top 100 + Top 10 Global y Mensual
+# TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO (VISIÓN ANUAL, PESTAÑAS SEPARADAS Y LÓGICA ROBUSTA)
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
 trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_sheet, mes_maximo) {
-  cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico Anual (Medicina y Odontología)...\n")
+  cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico Anual...\n")
   
-  # Blindaje de columnas
   nombres_cols <- names(tabla_consolidada_anual)
   if (!"ATEMED_DES_CIE10" %in% nombres_cols) tabla_consolidada_anual$ATEMED_DES_CIE10 <- ""
   if (!"PCTE_SEXO" %in% nombres_cols) tabla_consolidada_anual$PCTE_SEXO <- ""
@@ -17,7 +15,6 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
   if (!"PCTE_NAC_ETN" %in% nombres_cols) tabla_consolidada_anual$PCTE_NAC_ETN <- ""
   if (!"PCTE_PUEBLO" %in% nombres_cols) tabla_consolidada_anual$PCTE_PUEBLO <- ""
   
-  # 1. LIMPIEZA Y FILTRADO (Manteniendo la lógica robusta de tu Google Apps Script)
   base_limpia <- tabla_consolidada_anual %>%
     mutate(
       ESP = str_squish(str_remove_all(toupper(PROF_ESP_ATE), "[\r\n\"]")),
@@ -38,7 +35,7 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
     ) %>%
     mutate(
       esMed = str_detect(ESP, "MEDICIN|OBSTETR|PSICOLOG"), 
-      esOdo = str_detect(ESP, "ODONTO"), # ODONTOLOGÍA RESTAURADA
+      esOdo = str_detect(ESP, "ODONTO"), 
       esMujer = str_detect(SEX, "MUJER|^F$"),
       esHombre = !str_detect(SEX, "MUJER|^F$")
     ) %>%
@@ -46,18 +43,15 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
   
   if(nrow(base_limpia) == 0) return(NULL)
   
-  # FUNCIÓN INTERNA: Procesa independientemente Medicina y Odontología
-  procesar_motor_anual <- function(base_datos, fGlobal_100, fGlobal_10, fMes_10, nombre_rama) {
+  procesar_motor_anual <- function(base_datos, nombre_hoja, fGlobal_100, fGlobal_10, fMes_10, nombre_rama) {
     if(nrow(base_datos) == 0) return(NULL)
-    cat("   -> Procesando Top 100 y Top 10 para:", nombre_rama, "...\n")
+    cat("   -> Procesando Top 100 para:", nombre_rama, "en la pestaña", nombre_hoja, "...\n")
     
-    # --- MEGA-AGRUPACIÓN ANUAL (Replicando la exactitud de tu Apps Script) ---
     resumen_enfermedades <- base_datos %>%
       group_by(CIE, DES) %>%
       summarise(
         TOTAL_ANUAL = n(),
         
-        # Demografía Mensual (H/M)
         H_1 = sum(MES_ORIGEN == 1 & esHombre, na.rm=T), M_1 = sum(MES_ORIGEN == 1 & esMujer, na.rm=T),
         H_2 = sum(MES_ORIGEN == 2 & esHombre, na.rm=T), M_2 = sum(MES_ORIGEN == 2 & esMujer, na.rm=T),
         H_3 = sum(MES_ORIGEN == 3 & esHombre, na.rm=T), M_3 = sum(MES_ORIGEN == 3 & esMujer, na.rm=T),
@@ -71,7 +65,6 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         H_11 = sum(MES_ORIGEN == 11 & esHombre, na.rm=T), M_11 = sum(MES_ORIGEN == 11 & esMujer, na.rm=T),
         H_12 = sum(MES_ORIGEN == 12 & esHombre, na.rm=T), M_12 = sum(MES_ORIGEN == 12 & esMujer, na.rm=T),
         
-        # ETNIAS TOP 100 (Lógica Robusta de Apps Script str_detect)
         E_Indigena = sum(str_detect(ETN, "INDIGENA|INDÍGENA"), na.rm=T),
         E_Mestizo  = sum(str_detect(ETN, "MESTIZ"), na.rm=T),
         E_Afro     = sum(str_detect(ETN, "AFRO"), na.rm=T),
@@ -82,7 +75,6 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         E_NoAplica = sum(str_detect(ETN, "APLICA"), na.rm=T),
         E_NoSabe   = sum(str_detect(ETN, "SABE|RESPONDE"), na.rm=T),
         
-        # TOP 10 GLOBAL (H/M)
         T10G_E_Indigena_H = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre, na.rm=T),
         T10G_E_Indigena_M = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer, na.rm=T),
         T10G_E_Mestizo_H  = sum(str_detect(ETN, "MESTIZ") & esHombre, na.rm=T),
@@ -124,7 +116,7 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         T10G_P_VacioInd_H = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre, na.rm=T),
         T10G_P_VacioInd_M = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer, na.rm=T),
         
-        # TOP 10 MES ACTUAL (H/M)
+        # TOP 10 MES ACTUAL 
         T10M_E_Indigena_H = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_E_Indigena_M = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_E_Mestizo_H  = sum(str_detect(ETN, "MESTIZ") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
@@ -170,9 +162,6 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
       ) %>%
       arrange(desc(TOTAL_ANUAL))
     
-    # -------------------------------------------------------------
-    # CONSTRUCCIÓN DE MATRICES TOP 100 Y TOP 10 (Exacto a Google Apps Script)
-    # -------------------------------------------------------------
     mat_100_demo = matrix("", nrow = 100, ncol = 26); mat_100_etn = matrix("", nrow = 100, ncol = 10)
     mat_10G_E = matrix("", nrow=10, ncol=16); mat_10G_N = matrix("", nrow=10, ncol=8); mat_10G_P = matrix("", nrow=10, ncol=20)
     mat_10M_E = matrix("", nrow=10, ncol=16); mat_10M_N = matrix("", nrow=10, ncol=8); mat_10M_P = matrix("", nrow=10, ncol=20)
@@ -198,7 +187,6 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
     
     for(i in 1:min(10, nrow(resumen_enfermedades))) {
       r <- resumen_enfermedades[i, ]
-      # TOP 10 GLOBAL
       mat_10G_E[i,1]<-r$CIE; mat_10G_E[i,2]<-r$DES; mat_10G_N[i,1]<-r$CIE; mat_10G_N[i,2]<-r$DES; mat_10G_P[i,1]<-r$CIE; mat_10G_P[i,2]<-r$DES
       mat_10G_E[i,3]<-fc(r$T10G_E_Indigena_H); mat_10G_E[i,4]<-fc(r$T10G_E_Indigena_M); mat_10G_E[i,5]<-fc(r$T10G_E_Mestizo_H); mat_10G_E[i,6]<-fc(r$T10G_E_Mestizo_M)
       mat_10G_E[i,7]<-fc(r$T10G_E_Blanco_H); mat_10G_E[i,8]<-fc(r$T10G_E_Blanco_M); mat_10G_E[i,9]<-fc(r$T10G_E_Aplica_H); mat_10G_E[i,10]<-fc(r$T10G_E_Aplica_M)
@@ -214,7 +202,6 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
       mat_10G_P[i,15]<-fc(r$T10G_P_Karanki_H); mat_10G_P[i,16]<-fc(r$T10G_P_Karanki_M); mat_10G_P[i,17]<-fc(r$T10G_P_Sabe_H); mat_10G_P[i,18]<-fc(r$T10G_P_Sabe_M)
       mat_10G_P[i,19]<-fc(r$T10G_P_VacioInd_H); mat_10G_P[i,20]<-fc(r$T10G_P_VacioInd_M)
       
-      # TOP 10 MES ACTUAL
       mat_10M_E[i,1]<-r$CIE; mat_10M_E[i,2]<-r$DES; mat_10M_N[i,1]<-r$CIE; mat_10M_N[i,2]<-r$DES; mat_10M_P[i,1]<-r$CIE; mat_10M_P[i,2]<-r$DES
       mat_10M_E[i,3]<-fc(r$T10M_E_Indigena_H); mat_10M_E[i,4]<-fc(r$T10M_E_Indigena_M); mat_10M_E[i,5]<-fc(r$T10M_E_Mestizo_H); mat_10M_E[i,6]<-fc(r$T10M_E_Mestizo_M)
       mat_10M_E[i,7]<-fc(r$T10M_E_Blanco_H); mat_10M_E[i,8]<-fc(r$T10M_E_Blanco_M); mat_10M_E[i,9]<-fc(r$T10M_E_Aplica_H); mat_10M_E[i,10]<-fc(r$T10M_E_Aplica_M)
@@ -231,13 +218,12 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
       mat_10M_P[i,19]<-fc(r$T10M_P_VacioInd_H); mat_10M_P[i,20]<-fc(r$T10M_P_VacioInd_M)
     }
     
-    # Transformación y Envío a Sheets
     escribir <- function(mat, r) { 
       df <- as.data.frame(mat); df[,3:ncol(df)] <- lapply(df[,3:ncol(df)], as.numeric); 
-      range_write(id_google_sheet, df, range = paste0("PRINCI-MORBI!", r), col_names = FALSE, reformat = FALSE) 
+      range_write(id_google_sheet, df, range = paste0(nombre_hoja, "!", r), col_names = FALSE, reformat = FALSE) 
     }
     
-    cat("📝 Escribiendo Matrices para:", nombre_rama, "...\n")
+    # --- AQUÍ USAMOS nombre_hoja PARA ESCRIBIR EN LA PESTAÑA CORRECTA ---
     escribir(mat_100_demo, paste0("B", fGlobal_100))
     escribir(mat_100_etn, paste0("AF", fGlobal_100))
     
@@ -250,12 +236,12 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
     escribir(mat_10M_P, paste0("CQ", fMes_10))
   }
   
-  # 4. EJECUCIÓN (Medicina y Odontología Restauradas)
   base_med <- base_limpia %>% filter(esMed)
   base_odo <- base_limpia %>% filter(esOdo)
   
-  procesar_motor_anual(base_med, 6, 6, 22, "Medicina")
-  procesar_motor_anual(base_odo, 112, 112, 128, "Odontología")
+  # AHORA APUNTAN A LAS PESTAÑAS EXACTAS QUE ESTÁN EN TUS IMÁGENES
+  procesar_motor_anual(base_med, "PERFIL EPIDEMIOLOGICO", 6, 6, 22, "Medicina")
+  procesar_motor_anual(base_odo, "CAUSAS ODONTOLOGICA", 6, 6, 22, "Odontología")
   
-  cat("✅ Trabajador 9 finalizado. Perfil Anual y Top 10 Intercultural completado.\n")
+  cat("✅ Trabajador 9 finalizado.\n")
 }
