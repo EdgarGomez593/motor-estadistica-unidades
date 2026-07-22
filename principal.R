@@ -136,17 +136,18 @@ ejecutar_sala_situacional_maestra <- function() {
     if(length(lista_archivos_validos) == 0) stop("Ningún mes tiene archivos CSV en la estructura detectada.")
     
     # --- 5. FILTROS DE TIEMPO (BÚNKER O NORMAL) ---
-    # Si estamos en modo Búnker y pidieron un mes específico
     if (mes_especifico != "" && mes_especifico != "todos") {
       lista_archivos_validos <- lista_archivos_validos[sapply(lista_archivos_validos, function(x) x$mes_numero == as.numeric(mes_especifico))]
       if(length(lista_archivos_validos) == 0) stop("La carpeta del año existe, pero no hay datos CSV para el mes seleccionado.")
     } else if (modo == "ultimo") {
-      # Si estamos en modo normal jalamos solo el mes más reciente
       lista_archivos_validos <- list(lista_archivos_validos[[length(lista_archivos_validos)]])
     }
     
-# --- 6. BUCLE DE PROCESAMIENTO (MODO TURBO: MAGIA EN 3 MINUTOS) ---
+    # --- 6. BUCLE DE PROCESAMIENTO (MODO TURBO: MAGIA EN 3 MINUTOS) ---
     cat("🚀 INICIANDO MODO TURBO (Tiempo estimado: ~3.5 minutos para todo el año)...\n")
+    
+    # 🛡️ Bóveda Anual para el Trabajador 9
+    lista_anual_t9 <- list()
     
     # 🛡️ El Escudo de Titanio: Protege cada ejecución individualmente
     ejecutar_escudo <- function(funcion_trabajador, base, id, mes, nombre) {
@@ -159,7 +160,6 @@ ejecutar_sala_situacional_maestra <- function() {
           Sys.sleep(10)
           try(funcion_trabajador(base, id, mes), silent=TRUE) # Segundo intento
         } else {
-          # Si un mes no tiene datos específicos, no explota, solo se salta.
           cat("⚠️ Omitiendo", nombre, "en mes", mes, "(Posible falta de datos). Detalle:", e$message, "\n")
         }
       })
@@ -181,9 +181,14 @@ ejecutar_sala_situacional_maestra <- function() {
       }
       
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
+      
+      # 📥 ALMACENAMIENTO EN LA BÓVEDA ANUAL (Para el Trabajador 9)
+      base_mensual_consolidada$MES_ORIGEN <- mes_objetivo
+      lista_anual_t9[[length(lista_anual_t9) + 1]] <- base_mensual_consolidada
+      
       cat("✅ Registros listos para mes", mes_objetivo, ":", nrow(base_mensual_consolidada), "\n")
       
-      # Despliegue de los 13 escuadrones bajo el Escudo de Titanio
+      # Despliegue de los escuadrones bajo el Escudo de Titanio
       ejecutar_escudo(trabajador1_Embarazadas, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T1_Embarazadas")
       ejecutar_escudo(trabajador2_General, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T2_General")
       ejecutar_escudo(trabajador3_Edades, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T3_Edades")
@@ -193,12 +198,26 @@ ejecutar_sala_situacional_maestra <- function() {
       ejecutar_escudo(trabajador6_1_CronicasGenero, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T6_1_CronicasGenero")
       ejecutar_escudo(trabajador7_CoberturaAtenciones, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T7_CoberturaAtenciones")
       ejecutar_escudo(trabajador8_InterculturalidadTotal, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T8_Interculturalidad")
-      ejecutar_escudo(trabajador9_PerfilEpidemiologico, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T9_PerfilEpidemiologico")
+      # ⚠️ El Trabajador 9 ya no se ejecuta aquí, espera al final.
       ejecutar_escudo(trabajador10_Discapacidades, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T10_Discapacidades")
       ejecutar_escudo(trabajador11_EstadoNutricional, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T11_EstadoNutricional")
       ejecutar_escudo(trabajador12_Violencia, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T12_Violencia")
       ejecutar_escudo(trabajador13_AdolescentesRiesgo, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T13_AdolescentesRiesgo")
     }
+    
+    # ====================================================================
+    # 7. VISIÓN ANUAL: EJECUCIÓN DEL TRABAJADOR 9 (TOP 100 y TOP 10)
+    # ====================================================================
+    cat("\n🧠 Activando Visión Anual para Trabajador 9 (Medicina y Odontología)...\n")
+    base_total_anio <- bind_rows(lista_anual_t9)
+    mes_maximo <- max(base_total_anio$MES_ORIGEN, na.rm = TRUE)
+    
+    tryCatch({
+      trabajador9_PerfilEpidemiologico(base_total_anio, id_google_sheet, mes_maximo)
+    }, error = function(e) {
+      cat("⚠️ Error crítico en Trabajador 9 Anual:", e$message, "\n")
+    })
+
     cat("\n🎉 ¡SISTEMA ACTUALIZADO CON ÉXITO!\n")
   }, error = function(e) {
     cat("\n🛑 ALERTA CRÍTICA:", e$message, "\n")
