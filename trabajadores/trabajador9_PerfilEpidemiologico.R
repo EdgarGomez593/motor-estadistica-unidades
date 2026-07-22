@@ -1,32 +1,59 @@
 # ====================================================================================
-# TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO (VISIÓN ANUAL, PESTAÑAS SEPARADAS Y LÓGICA ROBUSTA)
+# TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO (VISIÓN ANUAL + BLINDAJE DE CABECERAS)
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
 trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_sheet, mes_maximo) {
-  cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico Anual...\n")
+  cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico Anual con Detector Inteligente...\n")
   
+  # ====================================================================
+  # 1. DETECTOR INTELIGENTE DE CABECERAS (Evita que el script muera si cambia un nombre)
+  # ====================================================================
   nombres_cols <- names(tabla_consolidada_anual)
-  if (!"ATEMED_DES_CIE10" %in% nombres_cols) tabla_consolidada_anual$ATEMED_DES_CIE10 <- ""
-  if (!"PCTE_SEXO" %in% nombres_cols) tabla_consolidada_anual$PCTE_SEXO <- ""
-  if (!"PCTE_AUTID_ETN" %in% nombres_cols) tabla_consolidada_anual$PCTE_AUTID_ETN <- ""
-  if (!"PCTE_NAC_ETN" %in% nombres_cols) tabla_consolidada_anual$PCTE_NAC_ETN <- ""
-  if (!"PCTE_PUEBLO" %in% nombres_cols) tabla_consolidada_anual$PCTE_PUEBLO <- ""
   
+  encontrar_col <- function(posibles) {
+    for(p in posibles) { if(p %in% nombres_cols) return(p) }
+    return(posibles[1]) # Retorna el primero por defecto para crearlo vacío si falta
+  }
+  
+  c_esp  <- encontrar_col(c("PROF_ESP_ATE", "ESPECIALIDAD"))
+  c_tip  <- encontrar_col(c("ATEMED_TIP_DIAG", "ATEMED_TIPO_DIAG"))
+  c_cron <- encontrar_col(c("ATEMED_CRON_DIAG", "ATEMED_CRONOLOGIA"))
+  c_con  <- encontrar_col(c("ATEMED_CON_DIAG", "ATEMED_COND_DIAG"))
+  c_cie  <- encontrar_col(c("ATEMED_CIE10", "CIE10"))
+  c_des  <- encontrar_col(c("ATEMED_DES_CIE10", "DES_CIE10"))
+  c_sex  <- encontrar_col(c("PCTE_SEXO", "SEXO"))
+  c_etn  <- encontrar_col(c("PCTE_AUTID_ETN", "AUTID_ETN"))
+  c_nac  <- encontrar_col(c("PCTE_NAC_ETN", "NAC_ETN"))
+  c_pue  <- encontrar_col(c("PCTE_PUEBLO", "PUEBLO"))
+  
+  # Si alguna columna vital no viene en el CSV, la inyectamos vacía para blindar el sistema
+  if (!c_esp %in% nombres_cols) tabla_consolidada_anual$PROF_ESP_ATE <- ""
+  if (!c_tip %in% nombres_cols) tabla_consolidada_anual$ATEMED_TIP_DIAG <- ""
+  if (!c_cron %in% nombres_cols) tabla_consolidada_anual$ATEMED_CRON_DIAG <- ""
+  if (!c_con %in% nombres_cols) tabla_consolidada_anual$ATEMED_CON_DIAG <- ""
+  if (!c_cie %in% nombres_cols) tabla_consolidada_anual$ATEMED_CIE10 <- ""
+  if (!c_des %in% nombres_cols) tabla_consolidada_anual$ATEMED_DES_CIE10 <- ""
+  if (!c_sex %in% nombres_cols) tabla_consolidada_anual$PCTE_SEXO <- ""
+  if (!c_etn %in% nombres_cols) tabla_consolidada_anual$PCTE_AUTID_ETN <- ""
+  if (!c_nac %in% nombres_cols) tabla_consolidada_anual$PCTE_NAC_ETN <- ""
+  if (!c_pue %in% nombres_cols) tabla_consolidada_anual$PCTE_PUEBLO <- ""
+
+  # 2. LIMPIEZA Y FILTRADO SEGURO
   base_limpia <- tabla_consolidada_anual %>%
     mutate(
-      ESP = str_squish(str_remove_all(toupper(PROF_ESP_ATE), "[\r\n\"]")),
-      TIP = str_squish(str_remove_all(toupper(ATEMED_TIP_DIAG), "[\r\n\"]")),
-      CR  = str_squish(str_remove_all(toupper(ATEMED_CRON_DIAG), "[\r\n\"]")),
-      CON = str_squish(str_remove_all(toupper(ATEMED_CON_DIAG), "[\r\n\"]")),
-      CIE = str_squish(str_remove_all(toupper(ATEMED_CIE10), "[\r\n\"\\.]")),
-      DES = str_squish(str_remove_all(toupper(ATEMED_DES_CIE10), "[\r\n\"]")),
-      SEX = str_squish(str_remove_all(toupper(PCTE_SEXO), "[\r\n\"]")),
-      ETN = str_squish(str_remove_all(toupper(PCTE_AUTID_ETN), "[\r\n\"]")),
-      NAC = str_squish(str_remove_all(toupper(PCTE_NAC_ETN), "[\r\n\"]")),
-      PUE = str_squish(str_remove_all(toupper(PCTE_PUEBLO), "[\r\n\"]"))
+      ESP = str_squish(str_remove_all(toupper(!!sym(c_esp)), "[\r\n\"]")),
+      TIP = str_squish(str_remove_all(toupper(!!sym(c_tip)), "[\r\n\"]")),
+      CR  = str_squish(str_remove_all(toupper(!!sym(c_cron)), "[\r\n\"]")),
+      CON = str_squish(str_remove_all(toupper(!!sym(c_con)), "[\r\n\"]")),
+      CIE = str_squish(str_remove_all(toupper(!!sym(c_cie)), "[\r\n\"\\.]")),
+      DES = str_squish(str_remove_all(toupper(!!sym(c_des)), "[\r\n\"]")),
+      SEX = str_squish(str_remove_all(toupper(!!sym(c_sex)), "[\r\n\"]")),
+      ETN = str_squish(str_remove_all(toupper(!!sym(c_etn)), "[\r\n\"]")),
+      NAC = str_squish(str_remove_all(toupper(!!sym(c_nac)), "[\r\n\"]")),
+      PUE = str_squish(str_remove_all(toupper(!!sym(c_pue)), "[\r\n\"]"))
     ) %>%
     filter(
       str_detect(TIP, "MORBILIDAD") & 
@@ -41,10 +68,16 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
     ) %>%
     filter(esMed | esOdo) 
   
-  if(nrow(base_limpia) == 0) return(NULL)
+  if(nrow(base_limpia) == 0) {
+    cat("⚠️ ADVERTENCIA: La base filtrada del Trabajador 9 está en 0 registros. Revisa si los nombres de los diagnósticos coinciden.\n")
+    return(NULL)
+  }
   
   procesar_motor_anual <- function(base_datos, nombre_hoja, fGlobal_100, fGlobal_10, fMes_10, nombre_rama) {
-    if(nrow(base_datos) == 0) return(NULL)
+    if(nrow(base_datos) == 0) {
+      cat("   -> Sin datos para procesar en:", nombre_rama, "\n")
+      return(NULL)
+    }
     cat("   -> Procesando Top 100 para:", nombre_rama, "en la pestaña", nombre_hoja, "...\n")
     
     resumen_enfermedades <- base_datos %>%
@@ -65,7 +98,7 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         H_11 = sum(MES_ORIGEN == 11 & esHombre, na.rm=T), M_11 = sum(MES_ORIGEN == 11 & esMujer, na.rm=T),
         H_12 = sum(MES_ORIGEN == 12 & esHombre, na.rm=T), M_12 = sum(MES_ORIGEN == 12 & esMujer, na.rm=T),
         
-        E_Indigena = sum(str_detect(ETN, "INDIGENA|INDÍGENA"), na.rm=T),
+        E_Indigena = sum(str_detect(ETN, "IND.GENA"), na.rm=T), # COMODÍN REGEX APLICADO
         E_Mestizo  = sum(str_detect(ETN, "MESTIZ"), na.rm=T),
         E_Afro     = sum(str_detect(ETN, "AFRO"), na.rm=T),
         E_Montubio = sum(str_detect(ETN, "MONTUB|MONTUV"), na.rm=T),
@@ -75,8 +108,8 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         E_NoAplica = sum(str_detect(ETN, "APLICA"), na.rm=T),
         E_NoSabe   = sum(str_detect(ETN, "SABE|RESPONDE"), na.rm=T),
         
-        T10G_E_Indigena_H = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre, na.rm=T),
-        T10G_E_Indigena_M = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer, na.rm=T),
+        T10G_E_Indigena_H = sum(str_detect(ETN, "IND.GENA") & esHombre, na.rm=T),
+        T10G_E_Indigena_M = sum(str_detect(ETN, "IND.GENA") & esMujer, na.rm=T),
         T10G_E_Mestizo_H  = sum(str_detect(ETN, "MESTIZ") & esHombre, na.rm=T),
         T10G_E_Mestizo_M  = sum(str_detect(ETN, "MESTIZ") & esMujer, na.rm=T),
         T10G_E_Blanco_H   = sum(str_detect(ETN, "BLANC") & esHombre, na.rm=T),
@@ -103,8 +136,8 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         T10G_P_Chibuleo_M = sum(str_detect(PUE, "CHIBULEO") & esMujer, na.rm=T),
         T10G_P_Otavalo_H  = sum(str_detect(PUE, "OTAVALO") & esHombre, na.rm=T),
         T10G_P_Otavalo_M  = sum(str_detect(PUE, "OTAVALO") & esMujer, na.rm=T),
-        T10G_P_Puruha_H   = sum(str_detect(PUE, "PURUHA|PURUHÁ") & esHombre, na.rm=T),
-        T10G_P_Puruha_M   = sum(str_detect(PUE, "PURUHA|PURUHÁ") & esMujer, na.rm=T),
+        T10G_P_Puruha_H   = sum(str_detect(PUE, "PURUH.") & esHombre, na.rm=T),
+        T10G_P_Puruha_M   = sum(str_detect(PUE, "PURUH.") & esMujer, na.rm=T),
         T10G_P_Salasaca_H = sum(str_detect(PUE, "SALASAKA|SALASACA") & esHombre, na.rm=T),
         T10G_P_Salasaca_M = sum(str_detect(PUE, "SALASAKA|SALASACA") & esMujer, na.rm=T),
         T10G_P_Guaranca_H = sum(str_detect(PUE, "WARANKA|GUARANCA") & esHombre, na.rm=T),
@@ -113,12 +146,11 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         T10G_P_Karanki_M  = sum(str_detect(PUE, "KARANKI") & esMujer, na.rm=T),
         T10G_P_Sabe_H     = sum(str_detect(PUE, "SABE|RESPONDE") & esHombre, na.rm=T),
         T10G_P_Sabe_M     = sum(str_detect(PUE, "SABE|RESPONDE") & esMujer, na.rm=T),
-        T10G_P_VacioInd_H = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre, na.rm=T),
-        T10G_P_VacioInd_M = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer, na.rm=T),
+        T10G_P_VacioInd_H = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "IND.GENA") & esHombre, na.rm=T),
+        T10G_P_VacioInd_M = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "IND.GENA") & esMujer, na.rm=T),
         
-        # TOP 10 MES ACTUAL 
-        T10M_E_Indigena_H = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
-        T10M_E_Indigena_M = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
+        T10M_E_Indigena_H = sum(str_detect(ETN, "IND.GENA") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
+        T10M_E_Indigena_M = sum(str_detect(ETN, "IND.GENA") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_E_Mestizo_H  = sum(str_detect(ETN, "MESTIZ") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_E_Mestizo_M  = sum(str_detect(ETN, "MESTIZ") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_E_Blanco_H   = sum(str_detect(ETN, "BLANC") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
@@ -145,8 +177,8 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         T10M_P_Chibuleo_M = sum(str_detect(PUE, "CHIBULEO") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_P_Otavalo_H  = sum(str_detect(PUE, "OTAVALO") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_P_Otavalo_M  = sum(str_detect(PUE, "OTAVALO") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
-        T10M_P_Puruha_H   = sum(str_detect(PUE, "PURUHA|PURUHÁ") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
-        T10M_P_Puruha_M   = sum(str_detect(PUE, "PURUHA|PURUHÁ") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
+        T10M_P_Puruha_H   = sum(str_detect(PUE, "PURUH.") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
+        T10M_P_Puruha_M   = sum(str_detect(PUE, "PURUH.") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_P_Salasaca_H = sum(str_detect(PUE, "SALASAKA|SALASACA") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_P_Salasaca_M = sum(str_detect(PUE, "SALASAKA|SALASACA") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_P_Guaranca_H = sum(str_detect(PUE, "WARANKA|GUARANCA") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
@@ -155,8 +187,8 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         T10M_P_Karanki_M  = sum(str_detect(PUE, "KARANKI") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_P_Sabe_H     = sum(str_detect(PUE, "SABE|RESPONDE") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
         T10M_P_Sabe_M     = sum(str_detect(PUE, "SABE|RESPONDE") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
-        T10M_P_VacioInd_H = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
-        T10M_P_VacioInd_M = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
+        T10M_P_VacioInd_H = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "IND.GENA") & esHombre & MES_ORIGEN == mes_maximo, na.rm=T),
+        T10M_P_VacioInd_M = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "IND.GENA") & esMujer & MES_ORIGEN == mes_maximo, na.rm=T),
         
         .groups = 'drop'
       ) %>%
@@ -223,7 +255,7 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
       range_write(id_google_sheet, df, range = paste0(nombre_hoja, "!", r), col_names = FALSE, reformat = FALSE) 
     }
     
-    # --- AQUÍ USAMOS nombre_hoja PARA ESCRIBIR EN LA PESTAÑA CORRECTA ---
+    cat("📝 Escribiendo Matrices para:", nombre_rama, "...\n")
     escribir(mat_100_demo, paste0("B", fGlobal_100))
     escribir(mat_100_etn, paste0("AF", fGlobal_100))
     
@@ -239,9 +271,8 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
   base_med <- base_limpia %>% filter(esMed)
   base_odo <- base_limpia %>% filter(esOdo)
   
-  # AHORA APUNTAN A LAS PESTAÑAS EXACTAS QUE ESTÁN EN TUS IMÁGENES
   procesar_motor_anual(base_med, "PERFIL EPIDEMIOLOGICO", 6, 6, 22, "Medicina")
   procesar_motor_anual(base_odo, "CAUSAS ODONTOLOGICA", 6, 6, 22, "Odontología")
   
-  cat("✅ Trabajador 9 finalizado.\n")
+  cat("✅ Trabajador 9 finalizado. Perfil Epidemiológico Anual y Top 10 Intercultural completado.\n")
 }
