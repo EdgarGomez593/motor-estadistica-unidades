@@ -1,6 +1,5 @@
 # ====================================================================================
-# TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO (LÓGICA INTERCULTURAL ESTRICTA Y ORTOGRÁFICA)
-# Arquitectura: Filtro Morbilidad Inicial -> Top 100 (Mensual/Etnia) y Top 10 (Intercultural)
+# TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO (LÓGICA INTERCULTURAL ESTRICTA Y MODO FRANCOTIRADOR)
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -9,7 +8,6 @@ library(googlesheets4)
 trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
   cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico (Top 100 y Top 10)...\n")
   
-  # 1. DETERMINAR EL MES ACTUAL DE PROCESAMIENTO
   mes_actual_num <- mes_objetivo
   
   # Blindaje de columnas
@@ -20,7 +18,7 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
   if (!"PCTE_NAC_ETN" %in% nombres_cols) tabla_consolidada$PCTE_NAC_ETN <- ""
   if (!"PCTE_PUEBLO" %in% nombres_cols) tabla_consolidada$PCTE_PUEBLO <- ""
   
-  # 2. LIMPIEZA Y FILTRADO ESTRICTO (Solo Morbilidad, Primera, Definitivo Inicial)
+  # 1. LIMPIEZA RESPETANDO LA ORTOGRAFÍA (Se mantienen tildes para búsqueda exacta)
   base_limpia <- tabla_consolidada %>%
     mutate(
       ESP = str_squish(str_remove_all(toupper(PROF_ESP_ATE), "[\r\n\"]")),
@@ -40,53 +38,50 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
         str_detect(CON, "DEFINITIVO INICIAL")
     ) %>%
     mutate(
-      esMed = str_detect(ESP, "MEDICIN|OBSTETR|PSICOLOG"),
-      esOdo = str_detect(ESP, "ODONTO"),
+      esMed = str_detect(ESP, "MEDICIN|OBSTETR"), # Solo roles médicos (Filtro Supremo)
       esMujer = str_detect(SEX, "MUJER|^F$"),
-      esHombre = !str_detect(SEX, "MUJER|^F$") # Asumimos hombre si no es mujer para el conteo binario
+      esHombre = !str_detect(SEX, "MUJER|^F$")
     ) %>%
-    filter(esMed | esOdo) # Solo dejamos pasar las ramas autorizadas
+    filter(esMed)
   
-  # Función interna para procesar cada bloque (Médicos u Odontólogos)
   procesar_motor <- function(base_datos, fila_global_100, fila_global_10, fila_mes_10) {
     if(nrow(base_datos) == 0) return(NULL)
     
-    # --- AGRUPACIÓN TOP 100 ---
+    # --- AGRUPACIÓN TOP 100 CON BÚSQUEDA EXACTA (==) ---
     resumen_enfermedades <- base_datos %>%
       group_by(CIE, DES) %>%
       summarise(
         TOTAL = n(),
         
-        # Conteo de Género para el mes actual procesado
         Hombres_Mes = sum(esHombre, na.rm = TRUE),
         Mujeres_Mes = sum(esMujer, na.rm = TRUE),
         
-        # Conteo Ortográfico de Etnias (Columnas 30 a 39 mapeadas a índices 1 a 10)
-        E_Indigena = sum(str_detect(ETN, "INDIGENA|INDÍGENA"), na.rm = TRUE),
-        E_Mestizo  = sum(str_detect(ETN, "MESTIZ"), na.rm = TRUE),
-        E_Afro     = sum(str_detect(ETN, "AFRO"), na.rm = TRUE),
-        E_Montubio = sum(str_detect(ETN, "MONTUB|MONTUV"), na.rm = TRUE),
-        E_Mulato   = sum(str_detect(ETN, "MULAT"), na.rm = TRUE),
-        E_Negro    = sum(str_detect(ETN, "NEGR"), na.rm = TRUE),
-        E_Blanco   = sum(str_detect(ETN, "BLANC"), na.rm = TRUE),
-        E_NoAplica = sum(str_detect(ETN, "APLICA"), na.rm = TRUE),
-        E_NoSabe   = sum(str_detect(ETN, "SABE|RESPONDE"), na.rm = TRUE),
+        # BÚSQUEDA MILIMÉTRICA DE ETNIAS (Sin comodines, respeta tildes y slashes)
+        E_Indigena = sum(ETN == "INDÍGENA", na.rm = TRUE),
+        E_Mestizo  = sum(ETN == "MESTIZO/A", na.rm = TRUE),
+        E_Afro     = sum(ETN == "AFROECUATORIANO/AFRODESCENDIENTE", na.rm = TRUE),
+        E_Blanco   = sum(ETN == "BLANCO/A", na.rm = TRUE),
+        E_Mulato   = sum(ETN == "MULATO/A", na.rm = TRUE),
+        E_Montubio = sum(ETN == "MONTUBIO/A", na.rm = TRUE),
+        E_NoSabe   = sum(ETN == "NO SABE/NO RESPONDE", na.rm = TRUE),
+        E_NoAplica = sum(ETN == "NO APLICA", na.rm = TRUE),
+        E_Otro     = sum(ETN == "OTRO/A", na.rm = TRUE),
         
-        # Clasificadores Top 10 (Lógica Estricta)
-        T10_E_Indigena_H = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre, na.rm=T),
-        T10_E_Indigena_M = sum(str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer, na.rm=T),
-        T10_E_Mestizo_H  = sum(str_detect(ETN, "MESTIZ") & esHombre, na.rm=T),
-        T10_E_Mestizo_M  = sum(str_detect(ETN, "MESTIZ") & esMujer, na.rm=T),
-        T10_E_Blanco_H   = sum(str_detect(ETN, "BLANC") & esHombre, na.rm=T),
-        T10_E_Blanco_M   = sum(str_detect(ETN, "BLANC") & esMujer, na.rm=T),
-        T10_E_Aplica_H   = sum(str_detect(ETN, "APLICA") & esHombre, na.rm=T),
-        T10_E_Aplica_M   = sum(str_detect(ETN, "APLICA") & esMujer, na.rm=T),
-        T10_E_Montubio_H = sum(str_detect(ETN, "MONTUB|MONTUV") & esHombre, na.rm=T),
-        T10_E_Montubio_M = sum(str_detect(ETN, "MONTUB|MONTUV") & esMujer, na.rm=T),
-        T10_E_Sabe_H     = sum(str_detect(ETN, "SABE|RESPONDE") & esHombre, na.rm=T),
-        T10_E_Sabe_M     = sum(str_detect(ETN, "SABE|RESPONDE") & esMujer, na.rm=T),
-        T10_E_Afro_H     = sum(str_detect(ETN, "AFRO|MULAT|NEGR") & esHombre, na.rm=T),
-        T10_E_Afro_M     = sum(str_detect(ETN, "AFRO|MULAT|NEGR") & esMujer, na.rm=T),
+        # BÚSQUEDA MILIMÉTRICA TOP 10
+        T10_E_Indigena_H = sum((ETN == "INDÍGENA") & esHombre, na.rm=T),
+        T10_E_Indigena_M = sum((ETN == "INDÍGENA") & esMujer, na.rm=T),
+        T10_E_Mestizo_H  = sum((ETN == "MESTIZO/A") & esHombre, na.rm=T),
+        T10_E_Mestizo_M  = sum((ETN == "MESTIZO/A") & esMujer, na.rm=T),
+        T10_E_Blanco_H   = sum((ETN == "BLANCO/A") & esHombre, na.rm=T),
+        T10_E_Blanco_M   = sum((ETN == "BLANCO/A") & esMujer, na.rm=T),
+        T10_E_Aplica_H   = sum((ETN == "NO APLICA") & esHombre, na.rm=T),
+        T10_E_Aplica_M   = sum((ETN == "NO APLICA") & esMujer, na.rm=T),
+        T10_E_Montubio_H = sum((ETN == "MONTUBIO/A") & esHombre, na.rm=T),
+        T10_E_Montubio_M = sum((ETN == "MONTUBIO/A") & esMujer, na.rm=T),
+        T10_E_Sabe_H     = sum((ETN == "NO SABE/NO RESPONDE") & esHombre, na.rm=T),
+        T10_E_Sabe_M     = sum((ETN == "NO SABE/NO RESPONDE") & esMujer, na.rm=T),
+        T10_E_Afro_H     = sum((ETN == "AFROECUATORIANO/AFRODESCENDIENTE") & esHombre, na.rm=T),
+        T10_E_Afro_M     = sum((ETN == "AFROECUATORIANO/AFRODESCENDIENTE") & esMujer, na.rm=T),
         
         T10_N_Kichwa_H   = sum(str_detect(NAC, "KICHWA|QUICHUA") & esHombre, na.rm=T),
         T10_N_Kichwa_M   = sum(str_detect(NAC, "KICHWA|QUICHUA") & esMujer, na.rm=T),
@@ -111,17 +106,15 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
         T10_P_Karanki_M  = sum(str_detect(PUE, "KARANKI") & esMujer, na.rm=T),
         T10_P_Sabe_H     = sum(str_detect(PUE, "SABE|RESPONDE") & esHombre, na.rm=T),
         T10_P_Sabe_M     = sum(str_detect(PUE, "SABE|RESPONDE") & esMujer, na.rm=T),
-        T10_P_VacioInd_H = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "INDIGENA|INDÍGENA") & esHombre, na.rm=T),
-        T10_P_VacioInd_M = sum((PUE == "" | is.na(PUE)) & str_detect(ETN, "INDIGENA|INDÍGENA") & esMujer, na.rm=T),
+        T10_P_VacioInd_H = sum((PUE == "" | is.na(PUE)) & (ETN == "INDÍGENA") & esHombre, na.rm=T),
+        T10_P_VacioInd_M = sum((PUE == "" | is.na(PUE)) & (ETN == "INDÍGENA") & esMujer, na.rm=T),
         
         .groups = 'drop'
       ) %>%
       arrange(desc(TOTAL)) %>%
       head(100)
     
-    # -------------------------------------------------------------
-    # CONSTRUCCIÓN MATRIZ TOP 100 (100 filas x 26 cols) (100 filas x 10 cols)
-    # -------------------------------------------------------------
+    # --- CONSTRUCCIÓN MATRIZ TOP 100 ---
     matriz_100_demografica <- matrix("", nrow = 100, ncol = 26)
     matriz_100_etnias <- matrix("", nrow = 100, ncol = 10)
     
@@ -130,32 +123,25 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
       matriz_100_demografica[i, 1] <- row$CIE
       matriz_100_demografica[i, 2] <- row$DES
       
-      # Ubicar los datos de H/M en la columna del mes correspondiente
       col_h <- 2 + (mes_actual_num - 1) * 2 + 1
       col_m <- 2 + (mes_actual_num - 1) * 2 + 2
       
       if(row$Hombres_Mes > 0) matriz_100_demografica[i, col_h] <- row$Hombres_Mes
       if(row$Mujeres_Mes > 0) matriz_100_demografica[i, col_m] <- row$Mujeres_Mes
       
-      # Etnias (Mapeo a las columnas 30-39 de tu código original)
       if(row$E_Indigena > 0) matriz_100_etnias[i, 1] <- row$E_Indigena
       if(row$E_Mestizo > 0)  matriz_100_etnias[i, 2] <- row$E_Mestizo
       if(row$E_Afro > 0)     matriz_100_etnias[i, 3] <- row$E_Afro
       if(row$E_Montubio > 0) matriz_100_etnias[i, 4] <- row$E_Montubio
       if(row$E_Mulato > 0)   matriz_100_etnias[i, 5] <- row$E_Mulato
-      if(row$E_Negro > 0)    matriz_100_etnias[i, 6] <- row$E_Negro
+      # El espacio 6 era "Negro", lo dejamos vacío para respetar tus 10 columnas si ya no se usa, o mapeamos al siguiente
       if(row$E_Blanco > 0)   matriz_100_etnias[i, 7] <- row$E_Blanco
       if(row$E_NoAplica > 0) matriz_100_etnias[i, 8] <- row$E_NoAplica
       if(row$E_NoSabe > 0)   matriz_100_etnias[i, 9] <- row$E_NoSabe
-      
-      # El resto ("OTR") va a la columna 10 (colE = 39)
-      total_otros <- row$TOTAL - sum(c(row$E_Indigena, row$E_Mestizo, row$E_Afro, row$E_Montubio, row$E_Mulato, row$E_Negro, row$E_Blanco, row$E_NoAplica, row$E_NoSabe))
-      if(total_otros > 0) matriz_100_etnias[i, 10] <- total_otros
+      if(row$E_Otro > 0)     matriz_100_etnias[i, 10] <- row$E_Otro
     }
     
-    # -------------------------------------------------------------
-    # CONSTRUCCIÓN MATRICES TOP 10 (10 filas)
-    # -------------------------------------------------------------
+    # --- CONSTRUCCIÓN MATRICES TOP 10 ---
     matriz_10_E <- matrix("", nrow = 10, ncol = 16)
     matriz_10_N <- matrix("", nrow = 10, ncol = 8)
     matriz_10_P <- matrix("", nrow = 10, ncol = 20)
@@ -167,7 +153,6 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
       matriz_10_N[i, 1] <- row$CIE; matriz_10_N[i, 2] <- row$DES
       matriz_10_P[i, 1] <- row$CIE; matriz_10_P[i, 2] <- row$DES
       
-      # Llenado de H y M si son mayores a 0
       fc <- function(val) { if(val > 0) return(val) else return("") }
       
       matriz_10_E[i, 3] <- fc(row$T10_E_Indigena_H); matriz_10_E[i, 4] <- fc(row$T10_E_Indigena_M)
@@ -193,19 +178,13 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
       matriz_10_P[i, 19] <- fc(row$T10_P_VacioInd_H); matriz_10_P[i, 20] <- fc(row$T10_P_VacioInd_M)
     }
     
-# ====================================================================
-    # FILTRO PURIFICADOR QUIRÚRGICO (Respeta las letras de CIE10 y Diagnóstico)
-    # ====================================================================
-    
-    # 1. Purificar Top 100
+    # --- PURIFICACIÓN DE DATOS ANTES DE ESCRIBIR ---
     df_100_demografica <- as.data.frame(matriz_100_demografica)
-    # El secreto: [, 3:ncol(...)] aplica la limpieza solo desde la 3ra columna (Enero Hombre)
     df_100_demografica[, 3:ncol(df_100_demografica)] <- lapply(df_100_demografica[, 3:ncol(df_100_demografica)], as.numeric)
     
     df_100_etnias <- as.data.frame(matriz_100_etnias)
-    df_100_etnias[] <- lapply(df_100_etnias, as.numeric) # (Etnia son puros números, se limpia completo)
+    df_100_etnias[] <- lapply(df_100_etnias, as.numeric)
     
-    # 2. Purificar Top 10
     df_10_E <- as.data.frame(matriz_10_E)
     df_10_E[, 3:ncol(df_10_E)] <- lapply(df_10_E[, 3:ncol(df_10_E)], as.numeric)
     
@@ -215,32 +194,35 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
     df_10_P <- as.data.frame(matriz_10_P)
     df_10_P[, 3:ncol(df_10_P)] <- lapply(df_10_P[, 3:ncol(df_10_P)], as.numeric)
 
-
     # ====================================================================
-    # ESCRITURA MASIVA (Inyectando solo números puros)
+    # ESCRITURA EN MODO FRANCOTIRADOR (Evita borrar otros meses)
     # ====================================================================
     
-    # Top 100
-    range_write(ss = id_google_sheet, data = df_100_demografica, range = paste0("PRINCI-MORBI!B", fila_global_100), col_names = FALSE, reformat = FALSE)
+    # 1. Escribimos CIE y DES en B y C
+    range_write(ss = id_google_sheet, data = df_100_demografica[, 1:2], range = paste0("PRINCI-MORBI!B", fila_global_100), col_names = FALSE, reformat = FALSE)
+    
+    # 2. Localizamos las columnas exactas del mes que estamos procesando
+    letras_H <- c("D", "F", "H", "J", "L", "N", "P", "R", "T", "V", "X", "Z")
+    col_letra_objetivo <- letras_H[mes_actual_num]
+    rango_mes_actual <- paste0("PRINCI-MORBI!", col_letra_objetivo, fila_global_100)
+    
+    # Extraemos solo las 2 columnas del mes actual (Hombres y Mujeres)
+    col_h_index <- 2 + (mes_actual_num - 1) * 2 + 1
+    col_m_index <- col_h_index + 1
+    df_solo_mes <- df_100_demografica[, c(col_h_index, col_m_index)]
+    
+    # 3. Disparamos SOLO a esas dos columnas sin tocar el resto
+    range_write(ss = id_google_sheet, data = df_solo_mes, range = rango_mes_actual, col_names = FALSE, reformat = FALSE)
+    
+    # Escritura de matrices globales
     range_write(ss = id_google_sheet, data = df_100_etnias, range = paste0("PRINCI-MORBI!AF", fila_global_100), col_names = FALSE, reformat = FALSE)
-    
-    # Top 10 (Global)
     range_write(ss = id_google_sheet, data = df_10_E, range = paste0("PRINCI-MORBI!BK", fila_global_10), col_names = FALSE, reformat = FALSE)
     range_write(ss = id_google_sheet, data = df_10_N, range = paste0("PRINCI-MORBI!CE", fila_global_10), col_names = FALSE, reformat = FALSE)
     range_write(ss = id_google_sheet, data = df_10_P, range = paste0("PRINCI-MORBI!CQ", fila_global_10), col_names = FALSE, reformat = FALSE)
-    
-    # Top 10 (Mes Actual)
-    range_write(ss = id_google_sheet, data = df_10_E, range = paste0("PRINCI-MORBI!BK", fila_mes_10), col_names = FALSE, reformat = FALSE)
-    range_write(ss = id_google_sheet, data = df_10_N, range = paste0("PRINCI-MORBI!CE", fila_mes_10), col_names = FALSE, reformat = FALSE)
-    range_write(ss = id_google_sheet, data = df_10_P, range = paste0("PRINCI-MORBI!CQ", fila_mes_10), col_names = FALSE, reformat = FALSE)
   }
   
-  # 3. EJECUTAR LOS MOTORES
   base_med <- base_limpia %>% filter(esMed)
-  base_odo <- base_limpia %>% filter(esOdo)
+  procesar_motor(base_med, 6, 6, 22)    
   
-  procesar_motor(base_med, 6, 6, 22)    # Médicos
-  procesar_motor(base_odo, 112, 112, 128) # Odontología
-  
-  cat("✅ Trabajador 9 finalizado. Perfiles Epidemiológicos Top 100 y Top 10 actualizados.\n")
+  cat("✅ Trabajador 9 finalizado.\n")
 }
