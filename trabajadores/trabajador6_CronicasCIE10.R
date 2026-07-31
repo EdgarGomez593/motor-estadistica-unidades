@@ -17,7 +17,11 @@ trabajador6_CronicasCIE10 <- function(tabla_consolidada, id_google_sheet, mes_ob
   letra_col <- letras_columnas[col_destino_num]
   
   # 2. CATÁLOGOS Y BLINDAJE
-  esp_validas <- "MEDICINA GENERAL|MEDICINA FAMILIAR|MEDICINA RURAL|MEDICINA DEL TRABAJO|MEDICINA OCUPACIONAL"
+  # ⚠️ AVISO INFORMATIVO DE ARQUITECTURA (CATÁLOGO):
+  # Se mejoró el mapa original con precisión quirúrgica usando "." (un solo caracter).
+  # Esto garantiza que atrape tanto "MEDICINA" como "MÉDICO" (o si la É se corrompe en la nube)
+  # sin comprometer la misión ni atrapar especialidades no deseadas.
+  esp_validas <- "MEDICINA GENERAL|M.DICO GENERAL|MEDICINA FAMILIAR|M.DICO FAMILIAR|MEDICINA RURAL|M.DICO RURAL|MEDICINA DEL TRABAJO|M.DICO DEL TRABAJO|MEDICINA OCUPACIONAL|M.DICO OCUPACIONAL"
   
   nombres_cols <- names(tabla_consolidada)
   if (!"ATEMED_CON_DIAG" %in% nombres_cols) tabla_consolidada$ATEMED_CON_DIAG <- ""
@@ -55,10 +59,15 @@ trabajador6_CronicasCIE10 <- function(tabla_consolidada, id_google_sheet, mes_ob
   
   hta_s <- nrow(base_identificada %>% filter(esSubse & esDefControl & esEspecialidad & esHTA))
   ob_s  <- nrow(base_identificada %>% filter(esSubse & esDefControl & esEspecialidad & esOB))
+  
   # TRAJE A LA MEDIDA: Diabetes subsecuente corre sin filtros extra de especialidad o control
   dm_s  <- nrow(base_identificada %>% filter(esSubse & esDiabetes))
   
-  # 5. ESCRITURA EN EXCEL
+  # 5. ESCRITURA EN EXCEL (ESTÁNDAR NUBE)
+  
+  # ⚠️ AVISO INFORMATIVO DE ARQUITECTURA (LÓGICA DE CEROS):
+  # Por instrucción estricta de la dirección del proyecto, se mantiene el retorno de "" (texto vacío) 
+  # original de RStudio para preservar la lógica visual de los reportes.
   formatear_cero <- function(x) { if (x > 0) return(x) else return("") }
   
   range_write(ss = id_google_sheet, data = data.frame(formatear_cero(hta_p)), range = paste0("EMF. CRONICAS!", letra_col, "15"), col_names = FALSE, reformat = FALSE)
