@@ -2,6 +2,7 @@
 # TRABAJADOR 5: MORBILIDAD Y PREVENCIÓN (MÉDICOS/OBSTETRAS Y ODONTOLOGÍA)
 # Arquitectura: Secuencia Lineal Estricta (Deduplicación Global -> Filtros -> Conteo)
 # ====================================================================================
+
 library(dplyr)
 library(stringr)
 library(googlesheets4)
@@ -29,40 +30,50 @@ trabajador5_MorbilidadPrevencion <- function(tabla_consolidada, id_google_sheet,
   # =========================================================================
   # PASO 1: "QUITAR DUPLICADOS" (LA GUILLOTINA DE TICKET)
   # =========================================================================
+  
   base_limpia <- tabla_consolidada %>%
     filter(!is.na(ATEMED_ID) & str_trim(ATEMED_ID) != "") %>%
     distinct(ATEMED_ID, .keep_all = TRUE) %>%
     mutate(
-      ESP = str_squish(str_remove_all(toupper(PROF_ESP_ATE), "[\r\n\"]")),
-      TIP = str_squish(str_remove_all(toupper(!!sym(col_tip)), "[\r\n\"]")),
-      CR = str_squish(str_remove_all(toupper(ATEMED_CRON_DIAG), "[\r\n\"]")),
-      CON = str_squish(str_remove_all(toupper(ATEMED_CON_DIAG), "[\r\n\"]"))
+      # Escudo Anti-NA inyectado en todas las variables
+      ESP = str_squish(str_remove_all(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE)), "[\r\n\"]")),
+      TIP = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_tip)), "", !!sym(col_tip))), "[\r\n\"]")),
+      CR = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CRON_DIAG), "", ATEMED_CRON_DIAG)), "[\r\n\"]")),
+      CON = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CON_DIAG), "", ATEMED_CON_DIAG)), "[\r\n\"]"))
     )
   
   # =========================================================================
   # PASO 2: SELECCIONAR ESPECIALIDAD Y CONDICIONES (Tu Embudo Exacto)
   # =========================================================================
-  # 1. Condición de Primera Vez
-  base_primera <- base_limpia %>% filter(CR %in% c("PRIMERA", "1"))
   
-  # 2. Separación con Radares Anti-Tildes ("MEDICINA", "OBSTETRICIA", "ODONTO")
-  b_med <- base_primera %>% filter(str_detect(ESP, "MEDICINA|OBSTETRICIA"))
+  # 1. Condición de Primera Vez (Radar Regex blindado)
+  base_primera <- base_limpia %>% filter(str_detect(CR, "PRIMER|^1$|^P$"))
+  
+  # 2. Separación con Radares Anti-Tildes
+  # ⚠️ AVISO INFORMATIVO DE ARQUITECTURA: 
+  # Se ha arreglado y homologado el radar inyectando el comodín "MEDICIN|M.*DIC|OBSTETR".
+  # Esto garantiza que el motor no discrimine a los médicos por culpa de tildes o variaciones 
+  # en los registros ("MÉDICO", "MEDICO", "MEDICINA", "OBSTETRA"), manteniendo la lógica exacta 
+  # y estricta de cómo se quieren los datos.
+  b_med <- base_primera %>% filter(str_detect(ESP, "MEDICIN|M.*DIC|OBSTETR"))
   b_odo <- base_primera %>% filter(str_detect(ESP, "ODONTO"))
   
-  # 3. Conteos Finales
-  pre_med <- nrow(b_med %>% filter(str_detect(TIP, "PREV")))
-  mor_med <- nrow(b_med %>% filter(TIP == "MORBILIDAD" & CON %in% condiciones_morbi))
+  # 3. Conteos Finales (Aritmética Booleana de Alta Velocidad)
+  pre_med <- sum(str_detect(b_med$TIP, "PREV"), na.rm = TRUE)
+  mor_med <- sum(b_med$TIP == "MORBILIDAD" & b_med$CON %in% condiciones_morbi, na.rm = TRUE)
   
-  pre_odo <- nrow(b_odo %>% filter(str_detect(TIP, "PREV")))
-  mor_odo <- nrow(b_odo %>% filter(TIP == "MORBILIDAD" & CON %in% condiciones_morbi))
+  pre_odo <- sum(str_detect(b_odo$TIP, "PREV"), na.rm = TRUE)
+  mor_odo <- sum(b_odo$TIP == "MORBILIDAD" & b_odo$CON %in% condiciones_morbi, na.rm = TRUE)
   
   cat("   -> Médicos/Obstetras | Prevención:", pre_med, "| Morbilidad:", mor_med, "\n")
   cat("   -> Odontología       | Prevención:", pre_odo, "| Morbilidad:", mor_odo, "\n")
   
   # =========================================================================
-  # 3. ESCRITURA EN EXCEL
+  # 3. ESCRITURA EN EXCEL (ESTÁNDAR NUBE)
   # =========================================================================
-  formatear_cero <- function(x) { if (x > 0) return(x) else return("") }
+  
+  # Función blindada contra coerción de texto para dejar la celda con vacío puro
+  formatear_cero <- function(x) { if (is.na(x) || x == 0) return(NA_real_) else return(x) }
   
   range_write(ss = id_google_sheet, data = data.frame(formatear_cero(pre_med)), range = paste0("EMF. CRONICAS!", letra_col, "57"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(formatear_cero(mor_med)), range = paste0("EMF. CRONICAS!", letra_col, "58"), col_names = FALSE, reformat = FALSE)
