@@ -21,7 +21,12 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   letra_m <- letras_columnas[col_mujeres_num]
   
   # 2. CATÁLOGOS Y BLINDAJE
-  esp_validas <- "MEDICINA FAMILIAR Y COMUNITARIA|MEDICINA GENERAL|MEDICINA RURAL"
+  # ⚠️ AVISO INFORMATIVO DE ARQUITECTURA (CATÁLOGO HOMOLOGADO):
+  # Se sincronizó el GPS de este trabajador para que sea EXACTAMENTE igual al del Trabajador 6.
+  # Esto garantiza que los totales por género cuadren perfectamente con los totales generales,
+  # y nos blinda contra errores de tildes en la nube usando el comodín "."
+  esp_validas <- "MEDICINA GENERAL|M.DICO GENERAL|MEDICINA FAMILIAR|M.DICO FAMILIAR|MEDICINA RURAL|M.DICO RURAL|MEDICINA DEL TRABAJO|M.DICO DEL TRABAJO|MEDICINA OCUPACIONAL|M.DICO OCUPACIONAL"
+  
   codigos_cancer <- "C169|C509|C61X|C539"
   
   nombres_cols <- names(tabla_consolidada)
