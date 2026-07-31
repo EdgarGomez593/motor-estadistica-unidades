@@ -34,14 +34,15 @@ trabajador2_General <- function(tabla_consolidada, id_google_sheet, mes_objetivo
     filter(!is.na(ATEMED_ID) & str_trim(ATEMED_ID) != "") %>%
     # LA PURGA: Mantiene solo la primera aparición de cada ATEMED_ID (Ticket)
     distinct(ATEMED_ID, .keep_all = TRUE) %>%
-    # Estandarizamos todas las columnas que vamos a usar
+    
+    # Estandarizamos todas las columnas con Escudo Anti-NA
     mutate(
-      CIE = str_remove_all(str_trim(toupper(ATEMED_CIE10)), "[\r\n\"]"),
-      ESP = str_remove_all(str_trim(toupper(PROF_ESP_ATE)), "[\r\n\"]"),
-      EDAD = as.numeric(PCTE_ANIOS),
-      CED = str_remove_all(str_trim(toupper(PCTE_IDE)), "[\r\n\"]"),
-      DISC = str_remove_all(str_trim(toupper(PCTE_DISC)), "[\r\n\"]"),
-      CRO = str_remove_all(str_trim(toupper(ATEMED_CRON_DIAG)), "[\r\n\"]")
+      CIE = str_remove_all(str_trim(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10))), "[\r\n\"]"),
+      ESP = str_remove_all(str_trim(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE))), "[\r\n\"]"),
+      EDAD = as.numeric(PCTE_ANIOS), # as.numeric maneja los vacíos automáticamente
+      CED = str_remove_all(str_trim(toupper(ifelse(is.na(PCTE_IDE), "", PCTE_IDE))), "[\r\n\"]"),
+      DISC = str_remove_all(str_trim(toupper(ifelse(is.na(PCTE_DISC), "", PCTE_DISC))), "[\r\n\"]"),
+      CRO = str_remove_all(str_trim(toupper(ifelse(is.na(ATEMED_CRON_DIAG), "", ATEMED_CRON_DIAG))), "[\r\n\"]")
     )
   
   # ====================================================================
@@ -76,8 +77,8 @@ trabajador2_General <- function(tabla_consolidada, id_google_sheet, mes_objetivo
   # 3. PREPARACIÓN Y ESCRITURA EN GOOGLE SHEETS
   # ====================================================================
   
-  # Función para dejar en blanco ( "" ) si el valor es 0
-  formatear_cero <- function(x) { if (x > 0) return(x) else return("") }
+  # Función para inyectar vacío numérico puro (NA_real_) si el valor es 0
+  formatear_cero <- function(x) { if (is.na(x)) return(NA_real_); if (x > 0) return(x) else return(NA_real_) }
   
   v_m9 <- formatear_cero(m9)
   v_m1014 <- formatear_cero(m1014)
