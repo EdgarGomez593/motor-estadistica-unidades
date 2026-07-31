@@ -1,5 +1,5 @@
 # ====================================================================================
-# CEREBRO CENTRAL - AUTOMATIZACIÓN DE SALA SITUACIONAL (NIVEL OPERATIVO)
+# CEREBRO CENTRAL - AUTOMATIZACIÓN DE SALA SITUACIONAL PROVINCIAL (VERSIÓN GITHUB)
 # ====================================================================================
 
 library(googledrive)
@@ -8,12 +8,12 @@ library(dplyr)
 library(stringr)
 
 # ====================================================================================
-# AUTENTICACIÓN INTELIGENTE (Nube vs Local)
+# 1. AUTENTICACIÓN INTELIGENTE (Cédula Robótica para GitHub)
 # ====================================================================================
 llave_json <- Sys.getenv("GCP_CREDENTIALS")
 
 if (llave_json != "") {
-  cat("🔐 Detectado entorno de nube: Autenticando con Cédula Robótica...\n")
+  cat("🔐 Detectado entorno de nube (GitHub): Autenticando con Cédula Robótica...\n")
   writeLines(llave_json, "service_account.json")
   drive_auth(path = "service_account.json")
   gs4_auth(path = "service_account.json")
@@ -23,7 +23,10 @@ if (llave_json != "") {
   gs4_auth(email = "oedgargs89pico@gmail.com") 
 }
 
-# CONTRATACIÓN DE TRABAJADORES
+# ====================================================================================
+# 2. CONTRATACIÓN DE TRABAJADORES (Línea de Ensamblaje Completa)
+# ====================================================================================
+source("trabajadores/trabajador0_herramientas.R")
 source("trabajadores/trabajador1_embarazadas.R")
 source("trabajadores/trabajador2_general.R")
 source("trabajadores/trabajador3_edades.R")
@@ -38,39 +41,39 @@ source("trabajadores/trabajador10_Discapacidades.R")
 source("trabajadores/trabajador11_EstadoNutricional.R")
 source("trabajadores/trabajador12_Violencia.R")
 source("trabajadores/trabajador13_AdolescentesRiesgo.R")
+source("trabajadores/trabajador14_Top10Intercultural.R")
 
 # ====================================================================================
-# FUNCIÓN MAESTRA EN LA NUBE (VERSIÓN ESCÁNER HÍBRIDO + BÚNKER NEÓN)
+# 3. FUNCIÓN MAESTRA (EL DIRECTOR DE ORQUESTA AUTÓNOMO)
 # ====================================================================================
 ejecutar_sala_situacional_maestra <- function() {
+  
   tryCatch({
-    # --- 1. ATRAPAR LOS DATOS QUE ENVÍA GOOGLE SHEETS ---
+    # --- A. ATRAPAR LOS DATOS DEL GATILLO (Google Sheets) ---
     modo_original <- Sys.getenv("MODO_EJECUCION")
     id_carpeta_raiz <- Sys.getenv("ID_CARPETA")
     id_google_sheet <- Sys.getenv("ID_SHEET")
     
     if(modo_original == "") modo_original <- "ultimo"
-    if(id_carpeta_raiz == "") stop("Falta el ID de la carpeta raíz de Google Drive.")
+    if(id_carpeta_raiz == "") stop("Falta el ID de la carpeta raíz de Google Drive enviada por la interfaz.")
     
-    # --- 2. LÓGICA DE LA MÁQUINA DEL TIEMPO (BÚNKER NEÓN) ---
+    # --- B. LÓGICA DE LA MÁQUINA DEL TIEMPO (BÚNKER) ---
     modo <- modo_original
     anio_auditoria <- ""
     mes_especifico <- ""
     
-    # Si Google Sheets envió la palabra secreta desde la terminal (ej: "auditoria_2026_5")
     if (grepl("auditoria_", modo)) {
       partes <- strsplit(modo, "_")[[1]]
-      anio_auditoria <- partes[2]        # Atrapa el año (ej: "2026")
-      mes_especifico <- partes[3]        # Atrapa el mes (ej: "5" o "todos")
+      anio_auditoria <- partes[2]
+      mes_especifico <- partes[3]
       
       if (mes_especifico != "todos") {
-        modo <- "ultimo" # Forzamos la lógica para procesar 1 solo mes
+        modo <- "ultimo"
       } else {
-        modo <- "todos"  # Procesamos el año completo
+        modo <- "todos"
       }
     }
     
-    # --- 3. GPS INTELIGENTE: DETERMINAR EL AÑO A BUSCAR ---
     cat("\n======================================================\n")
     if(anio_auditoria != "") {
       anio_buscado <- anio_auditoria
@@ -80,19 +83,19 @@ ejecutar_sala_situacional_maestra <- function() {
       cat("📍 MODO NORMAL: Buscando el año actual:", anio_buscado, "\n")
     }
     
+    # --- C. ESCÁNER DE INFRAESTRUCTURA HÍBRIDA ---
     carpetas_raiz <- drive_ls(as_id(id_carpeta_raiz), type = "folder")
     carpeta_anio <- carpetas_raiz %>% filter(name == anio_buscado)
     
     if(nrow(carpeta_anio) == 0) stop(paste("No se encontró la carpeta del año:", anio_buscado))
     
-    # --- 4. ESCÁNER DE INFRAESTRUCTURA HÍBRIDA ---
     cat("🔍 Analizando estructura interna...\n")
     subcarpetas_meses <- drive_ls(as_id(carpeta_anio$id[1]), type = "folder") %>% arrange(name)
     archivos_csv_sueltos <- drive_ls(as_id(carpeta_anio$id[1]), type = "csv")
     
-    lista_archivos_validos <- list()
+    lista_archivos_COMPLETA <- list()
     
-    # >> ESCENARIO A: OFICINAS TÉCNICAS (Subcarpetas "01_enero", "02_febrero"...)
+    # Escenario 1: Carpetas por mes
     if (nrow(subcarpetas_meses) > 0) {
       cat("🏢 Estructura detectada: OFICINA TÉCNICA (Carpetas Mensuales)\n")
       for (i in 1:nrow(subcarpetas_meses)) {
@@ -100,7 +103,7 @@ ejecutar_sala_situacional_maestra <- function() {
         if(nrow(archivos_csv) > 0) {
           mes_num <- as.numeric(str_extract(subcarpetas_meses$name[i], "^\\d+"))
           if(!is.na(mes_num)) {
-            lista_archivos_validos[[length(lista_archivos_validos) + 1]] <- list(
+            lista_archivos_COMPLETA[[length(lista_archivos_COMPLETA) + 1]] <- list(
               mes_numero = mes_num,
               carpeta = subcarpetas_meses$name[i],
               archivos = archivos_csv
@@ -108,8 +111,8 @@ ejecutar_sala_situacional_maestra <- function() {
           }
         }
       }
-    }
-    # >> ESCENARIO B: UNIDADES DE SALUD (CSVs sueltos PRASS_ENE_2026.csv)
+    } 
+    # Escenario 2: Archivos sueltos por unidad
     else if (nrow(archivos_csv_sueltos) > 0) {
       cat("🏥 Estructura detectada: UNIDAD DE SALUD (Archivos Sueltos)\n")
       meses_diccionario <- c("ENE"=1, "FEB"=2, "MAR"=3, "ABR"=4, "MAY"=5, "JUN"=6,
@@ -124,7 +127,7 @@ ejecutar_sala_situacional_maestra <- function() {
         
         for (m in meses_unicos) {
           archivos_del_mes <- archivos_validos %>% filter(mes_numero == m)
-          lista_archivos_validos[[length(lista_archivos_validos) + 1]] <- list(
+          lista_archivos_COMPLETA[[length(lista_archivos_COMPLETA) + 1]] <- list(
             mes_numero = m,
             carpeta = paste("Mes consolidado:", archivos_del_mes$mes_texto[1]),
             archivos = archivos_del_mes
@@ -133,38 +136,41 @@ ejecutar_sala_situacional_maestra <- function() {
       }
     }
     
-    if(length(lista_archivos_validos) == 0) stop("Ningún mes tiene archivos CSV en la estructura detectada.")
+    if(length(lista_archivos_COMPLETA) == 0) stop("Ningún mes tiene archivos CSV en la estructura detectada.")
     
-    # --- 5. FILTROS DE TIEMPO (BÚNKER O NORMAL) ---
-    # Si estamos en modo Búnker y pidieron un mes específico
+    # --- D. FILTROS DE TIEMPO (Normal, Bunker, Último) ---
+    lista_archivos_validos <- lista_archivos_COMPLETA
+    
     if (mes_especifico != "" && mes_especifico != "todos") {
       lista_archivos_validos <- lista_archivos_validos[sapply(lista_archivos_validos, function(x) x$mes_numero == as.numeric(mes_especifico))]
       if(length(lista_archivos_validos) == 0) stop("La carpeta del año existe, pero no hay datos CSV para el mes seleccionado.")
     } else if (modo == "ultimo") {
-      # Si estamos en modo normal jalamos solo el mes más reciente
-      lista_archivos_validos <- list(lista_archivos_validos[[length(lista_archivos_validos)]])
+      lista_archivos_validos <- list(lista_archivos_COMPLETA[[length(lista_archivos_COMPLETA)]])
+      cat("🔍 MODO ÚLTIMO: Detectado el mes", lista_archivos_validos[[1]]$carpeta, "como el más reciente.\n")
+    } else {
+      cat("📚 MODO TODOS: Se procesarán", length(lista_archivos_validos), "meses históricos.\n")
     }
     
-# --- 6. BUCLE DE PROCESAMIENTO (MODO TURBO: MAGIA EN 3 MINUTOS) ---
-    cat("🚀 INICIANDO MODO TURBO (Tiempo estimado: ~3.5 minutos para todo el año)...\n")
-    
-    # 🛡️ El Escudo de Titanio: Protege cada ejecución individualmente
-    ejecutar_escudo <- function(funcion_trabajador, base, id, mes, nombre) {
+    # --- E. EL ESCUDO DE TITANIO (Tolerancia a fallos de Google API) ---
+    ejecutar_escudo <- function(funcion_trabajador, nombre, ...) {
       tryCatch({
-        funcion_trabajador(base, id, mes)
-        Sys.sleep(1.5) # Ritmo matemático: 1.5s = ~39 peticiones/min. (Límite Google es 60)
+        funcion_trabajador(...)
+        Sys.sleep(1.5) # Ritmo matemático Anti-Bloqueos
       }, error = function(e) {
         if(grepl("429", e$message) || grepl("Quota", e$message)) {
           cat("⏳ Límite de Google rozado en", nombre, ". Respiro de 10s...\n")
           Sys.sleep(10)
-          try(funcion_trabajador(base, id, mes), silent=TRUE) # Segundo intento
+          try(funcion_trabajador(...), silent=TRUE)
         } else {
-          # Si un mes no tiene datos específicos, no explota, solo se salta.
-          cat("⚠️ Omitiendo", nombre, "en mes", mes, "(Posible falta de datos). Detalle:", e$message, "\n")
+          cat("⚠️ Omitiendo", nombre, ". Detalle:", e$message, "\n")
         }
       })
     }
-
+    
+    # --- F. BUCLE DE PROCESAMIENTO MÚLTIPLE ---
+    cat("🚀 INICIANDO DESPLIEGUE DE TRABAJADORES...\n")
+    memoria_historica_trimestral <- list() 
+    
     for (item in lista_archivos_validos) {
       mes_objetivo <- item$mes_numero
       carpeta_actual <- item$carpeta
@@ -183,26 +189,63 @@ ejecutar_sala_situacional_maestra <- function() {
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
       cat("✅ Registros listos para mes", mes_objetivo, ":", nrow(base_mensual_consolidada), "\n")
       
-      # Despliegue de los 13 escuadrones bajo el Escudo de Titanio
-      ejecutar_escudo(trabajador1_Embarazadas, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T1_Embarazadas")
-      ejecutar_escudo(trabajador2_General, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T2_General")
-      ejecutar_escudo(trabajador3_Edades, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T3_Edades")
-      ejecutar_escudo(trabajador4_LugarAtencion, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T4_LugarAtencion")
-      ejecutar_escudo(trabajador5_MorbilidadPrevencion, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T5_MorbilidadPrevencion")
-      ejecutar_escudo(trabajador6_CronicasCIE10, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T6_CronicasCIE10")
-      ejecutar_escudo(trabajador6_1_CronicasGenero, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T6_1_CronicasGenero")
-      ejecutar_escudo(trabajador7_CoberturaAtenciones, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T7_CoberturaAtenciones")
-      ejecutar_escudo(trabajador8_InterculturalidadTotal, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T8_Interculturalidad")
-      ejecutar_escudo(trabajador9_PerfilEpidemiologico, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T9_PerfilEpidemiologico")
-      ejecutar_escudo(trabajador10_Discapacidades, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T10_Discapacidades")
-      ejecutar_escudo(trabajador11_EstadoNutricional, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T11_EstadoNutricional")
-      ejecutar_escudo(trabajador12_Violencia, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T12_Violencia")
-      ejecutar_escudo(trabajador13_AdolescentesRiesgo, base_mensual_consolidada, id_google_sheet, mes_objetivo, "T13_AdolescentesRiesgo")
+      # Alimentamos la Memoria Histórica
+      memoria_historica_trimestral[[mes_objetivo]] <- base_mensual_consolidada
+      
+      # Despliegue Escudado de los 13 Trabajadores
+      ejecutar_escudo(trabajador1_Embarazadas, "T1_Embarazadas", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador2_General, "T2_General", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador3_Edades, "T3_Edades", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador4_LugarAtencion, "T4_LugarAtencion", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador5_MorbilidadPrevencion, "T5_MorbilidadPrevencion", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador6_CronicasCIE10, "T6_CronicasCIE10", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador6_1_CronicasGenero, "T6_1_CronicasGenero", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador7_CoberturaAtenciones, "T7_CoberturaAtenciones", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador8_InterculturalidadTotal, "T8_Interculturalidad", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador9_PerfilEpidemiologico, "T9_PerfilEpidemiologico", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador10_Discapacidades, "T10_Discapacidades", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador11_EstadoNutricional, "T11_EstadoNutricional", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador12_Violencia, "T12_Violencia", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador13_AdolescentesRiesgo, "T13_AdolescentesRiesgo", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      
+      # --- G. RADAR TRIMESTRAL PARA TRABAJADOR 14 (MODO SIGILO) ---
+      # Si ejecutamos el "Mes Actual" y estamos en Cierre de Trimestre (Marzo, Junio, Sept, Dic)
+      if (modo == "ultimo" && mes_objetivo %in% c(3, 6, 9, 12)) {
+        cat("\n📡 RADAR TRIMESTRAL ACTIVADO: Detectado mes de cierre (", mes_objetivo, "). Rescatando historial para T14...\n")
+        
+        meses_a_rescatar <- c(mes_objetivo - 2, mes_objetivo - 1)
+        
+        for (m_rescate in meses_a_rescatar) {
+          # Buscamos en la lista original detectada si existe el mes a rescatar
+          item_rescate <- lista_archivos_COMPLETA[sapply(lista_archivos_COMPLETA, function(x) x$mes_numero == m_rescate)]
+          
+          if (length(item_rescate) > 0) {
+            item_r <- item_rescate[[1]]
+            cat("   -> Descargando en sigilo mes", m_rescate, "...\n")
+            cubeta_temp <- list()
+            
+            for (j in 1:nrow(item_r$archivos)) {
+              arch <- item_r$archivos[j, ]
+              nom_temp <- paste0("temp_rescate_", m_rescate, "_", j, ".csv")
+              suppressMessages(drive_download(as_id(arch$id), path = nom_temp, overwrite = TRUE))
+              cubeta_temp[[j]] <- read.csv(nom_temp, sep = ",", fileEncoding = "latin1")
+            }
+            # Llenamos la memoria histórica con los meses pasados sin procesarlos por los demás trabajadores
+            memoria_historica_trimestral[[m_rescate]] <- bind_rows(cubeta_temp)
+          }
+        }
+      }
+      
+      # Despliegue del Escuadrón 14 (Con su memoria llena)
+      ejecutar_escudo(trabajador14_Top10Intercultural, "T14_Top10Intercultural", base_mensual_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = memoria_historica_trimestral)
     }
-    cat("\n🎉 ¡SISTEMA ACTUALIZADO CON ÉXITO!\n")
+    
+    cat("\n🎉 ¡SISTEMA MAESTRO ACTUALIZADO CON ÉXITO!\n")
+    
   }, error = function(e) {
-    cat("\n🛑 ALERTA CRÍTICA:", e$message, "\n")
+    cat("\n🛑 ALERTA CRÍTICA EN EL CEREBRO CENTRAL:", e$message, "\n")
   })
 }
 
+# ENCENDIDO DEL MOTOR 
 ejecutar_sala_situacional_maestra()
