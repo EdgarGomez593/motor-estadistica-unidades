@@ -1,35 +1,42 @@
 # ====================================================================================
-# TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO (VISIÓN ANUAL + MEDICINA Y ODONTOLOGÍA)
-# Arquitectura: Base Anual -> Ranking Global Inamovible -> Escritura en Matriz 100x26
+# TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO (LÓGICA INTERCULTURAL ESTRICTA Y ORTOGRÁFICA)
+# Arquitectura: Paradigma ELT -> Top 50 Dinámico Mensual -> Vectorización Horizontal
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
-trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_sheet, mes_maximo) {
-  cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico Anual (Medicina y Odontología)...\n")
+trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
+  cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico Top 50 (Paradigma ELT)...\n")
+  
+  # ====================================================================
+  # PASO 1. DETERMINAR EL MES ACTUAL DE PROCESAMIENTO
+  # ====================================================================
+  mes_actual_num <- mes_objetivo
   
   # Blindaje de columnas
-  nombres_cols <- names(tabla_consolidada_anual)
-  if (!"ATEMED_DES_CIE10" %in% nombres_cols) tabla_consolidada_anual$ATEMED_DES_CIE10 <- ""
-  if (!"PCTE_SEXO" %in% nombres_cols) tabla_consolidada_anual$PCTE_SEXO <- ""
-  if (!"PCTE_AUTID_ETN" %in% nombres_cols) tabla_consolidada_anual$PCTE_AUTID_ETN <- ""
-  if (!"PCTE_NAC_ETN" %in% nombres_cols) tabla_consolidada_anual$PCTE_NAC_ETN <- ""
-  if (!"PCTE_PUEBLO" %in% nombres_cols) tabla_consolidada_anual$PCTE_PUEBLO <- ""
+  nombres_cols <- names(tabla_consolidada)
+  if (!"ATEMED_DES_CIE10" %in% nombres_cols) tabla_consolidada$ATEMED_DES_CIE10 <- ""
+  if (!"PCTE_SEXO" %in% nombres_cols) tabla_consolidada$PCTE_SEXO <- ""
+  if (!"PCTE_AUTID_ETN" %in% nombres_cols) tabla_consolidada$PCTE_AUTID_ETN <- ""
+  if (!"PCTE_NAC_ETN" %in% nombres_cols) tabla_consolidada$PCTE_NAC_ETN <- ""
+  if (!"PCTE_PUEBLO" %in% nombres_cols) tabla_consolidada$PCTE_PUEBLO <- ""
   
-  # 1. LIMPIEZA Y FILTRADO ESTRICTO (Respetando Tildes)
-  base_limpia <- tabla_consolidada_anual %>%
+  # ====================================================================
+  # PASO 2. LIMPIEZA Y FILTRADO ESTRICTO (Escudo NA Activo)
+  # ====================================================================
+  base_limpia <- tabla_consolidada %>%
     mutate(
-      ESP = str_squish(str_remove_all(toupper(PROF_ESP_ATE), "[\r\n\"]")),
-      TIP = str_squish(str_remove_all(toupper(ATEMED_TIP_DIAG), "[\r\n\"]")),
-      CR  = str_squish(str_remove_all(toupper(ATEMED_CRON_DIAG), "[\r\n\"]")),
-      CON = str_squish(str_remove_all(toupper(ATEMED_CON_DIAG), "[\r\n\"]")),
-      CIE = str_squish(str_remove_all(toupper(ATEMED_CIE10), "[\r\n\"\\.]")),
-      DES = str_squish(str_remove_all(toupper(ATEMED_DES_CIE10), "[\r\n\"]")),
-      SEX = str_squish(str_remove_all(toupper(PCTE_SEXO), "[\r\n\"]")),
-      ETN = str_squish(str_remove_all(toupper(PCTE_AUTID_ETN), "[\r\n\"]")),
-      NAC = str_squish(str_remove_all(toupper(PCTE_NAC_ETN), "[\r\n\"]")),
-      PUE = str_squish(str_remove_all(toupper(PCTE_PUEBLO), "[\r\n\"]"))
+      ESP = str_squish(str_remove_all(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE)), "[\r\n\"]")),
+      TIP = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_TIP_DIAG), "", ATEMED_TIP_DIAG)), "[\r\n\"]")),
+      CR  = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CRON_DIAG), "", ATEMED_CRON_DIAG)), "[\r\n\"]")),
+      CON = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CON_DIAG), "", ATEMED_CON_DIAG)), "[\r\n\"]")),
+      CIE = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10)), "[\r\n\"\\.]")),
+      DES = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_DES_CIE10), "", ATEMED_DES_CIE10)), "[\r\n\"]")),
+      SEX = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_SEXO), "", PCTE_SEXO)), "[\r\n\"]")),
+      ETN = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_AUTID_ETN), "", PCTE_AUTID_ETN)), "[\r\n\"]")),
+      NAC = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_NAC_ETN), "", PCTE_NAC_ETN)), "[\r\n\"]")),
+      PUE = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_PUEBLO), "", PCTE_PUEBLO)), "[\r\n\"]"))
     ) %>%
     filter(
       str_detect(TIP, "MORBILIDAD") & 
@@ -37,106 +44,167 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada_anual, id_google_
         str_detect(CON, "DEFINITIVO INICIAL")
     ) %>%
     mutate(
-      esMed = str_detect(ESP, "MEDICIN|OBSTETR"), 
-      esOdo = str_detect(ESP, "ODONTO"), # ¡Odontología restaurada!
+      # ⚠️ AVISO ARQUITECTURA: Blindaje ortográfico provincial aplicado (M.*DIC)
+      esMed = str_detect(ESP, "MEDICIN|M.*DIC|OBSTETR|PSICOLOG"),
+      esOdo = str_detect(ESP, "ODONTO"),
       esMujer = str_detect(SEX, "MUJER|^F$"),
-      esHombre = !str_detect(SEX, "MUJER|^F$")
+      esHombre = !str_detect(SEX, "MUJER|^F$") 
     ) %>%
-    filter(esMed | esOdo) # Dejamos pasar a ambas ramas
+    filter(esMed | esOdo) 
   
-  # Función interna para procesar el bloque anual (Se ejecutará 2 veces: Med y Odo)
-  procesar_motor_anual <- function(base_datos, fila_100, nombre_rama) {
+  # ====================================================================
+  # FUNCIÓN MOTOR: Procesa datos y ejecuta inyección ELT
+  # ====================================================================
+  procesar_motor <- function(base_datos, col_cie, col_etn, col_nac, col_pue) {
     if(nrow(base_datos) == 0) return(NULL)
-    cat("   -> Procesando Top 100 Anual para:", nombre_rama, "...\n")
     
-    # --- MEGA-AGRUPACIÓN ANUAL ---
+    # --- AGRUPACIÓN Y CREACIÓN DE MATRIZ TOP 50 ---
     resumen_enfermedades <- base_datos %>%
       group_by(CIE, DES) %>%
       summarise(
-        TOTAL_ANUAL = n(),
+        TOTAL = n(),
+        Hombres_Mes = sum(esHombre, na.rm = TRUE),
+        Mujeres_Mes = sum(esMujer, na.rm = TRUE),
         
-        # Distribución exacta de Hombres y Mujeres por los 12 meses
-        H_1 = sum(MES_ORIGEN == 1 & esHombre, na.rm=T), M_1 = sum(MES_ORIGEN == 1 & esMujer, na.rm=T),
-        H_2 = sum(MES_ORIGEN == 2 & esHombre, na.rm=T), M_2 = sum(MES_ORIGEN == 2 & esMujer, na.rm=T),
-        H_3 = sum(MES_ORIGEN == 3 & esHombre, na.rm=T), M_3 = sum(MES_ORIGEN == 3 & esMujer, na.rm=T),
-        H_4 = sum(MES_ORIGEN == 4 & esHombre, na.rm=T), M_4 = sum(MES_ORIGEN == 4 & esMujer, na.rm=T),
-        H_5 = sum(MES_ORIGEN == 5 & esHombre, na.rm=T), M_5 = sum(MES_ORIGEN == 5 & esMujer, na.rm=T),
-        H_6 = sum(MES_ORIGEN == 6 & esHombre, na.rm=T), M_6 = sum(MES_ORIGEN == 6 & esMujer, na.rm=T),
-        H_7 = sum(MES_ORIGEN == 7 & esHombre, na.rm=T), M_7 = sum(MES_ORIGEN == 7 & esMujer, na.rm=T),
-        H_8 = sum(MES_ORIGEN == 8 & esHombre, na.rm=T), M_8 = sum(MES_ORIGEN == 8 & esMujer, na.rm=T),
-        H_9 = sum(MES_ORIGEN == 9 & esHombre, na.rm=T), M_9 = sum(MES_ORIGEN == 9 & esMujer, na.rm=T),
-        H_10 = sum(MES_ORIGEN == 10 & esHombre, na.rm=T), M_10 = sum(MES_ORIGEN == 10 & esMujer, na.rm=T),
-        H_11 = sum(MES_ORIGEN == 11 & esHombre, na.rm=T), M_11 = sum(MES_ORIGEN == 11 & esMujer, na.rm=T),
-        H_12 = sum(MES_ORIGEN == 12 & esHombre, na.rm=T), M_12 = sum(MES_ORIGEN == 12 & esMujer, na.rm=T),
+        # ETNIA (10 ítems x 2 géneros = 20 variables) ----
+        ETN_Afro_H     = sum(str_detect(ETN, "AFRO.*") & esHombre, na.rm=T),
+        ETN_Afro_M     = sum(str_detect(ETN, "AFRO.*") & esMujer, na.rm=T),
+        ETN_Blanco_H   = sum(str_detect(ETN, "BLANC.*") & esHombre, na.rm=T),
+        ETN_Blanco_M   = sum(str_detect(ETN, "BLANC.*") & esMujer, na.rm=T),
+        ETN_Indigena_H = sum(str_detect(ETN, "IND.*GENA") & esHombre, na.rm=T),
+        ETN_Indigena_M = sum(str_detect(ETN, "IND.*GENA") & esMujer, na.rm=T),
+        ETN_Mestizo_H  = sum(str_detect(ETN, "MESTIZ.*") & esHombre, na.rm=T),
+        ETN_Mestizo_M  = sum(str_detect(ETN, "MESTIZ.*") & esMujer, na.rm=T),
+        ETN_Montubio_H = sum(str_detect(ETN, "MONTUB.*|MONTUV.*") & esHombre, na.rm=T),
+        ETN_Montubio_M = sum(str_detect(ETN, "MONTUB.*|MONTUV.*") & esMujer, na.rm=T),
+        ETN_Mulato_H   = sum(str_detect(ETN, "MULAT.*") & esHombre, na.rm=T),
+        ETN_Mulato_M   = sum(str_detect(ETN, "MULAT.*") & esMujer, na.rm=T),
+        ETN_Negro_H    = sum(str_detect(ETN, "NEGR.*") & esHombre, na.rm=T),
+        ETN_Negro_M    = sum(str_detect(ETN, "NEGR.*") & esMujer, na.rm=T),
+        ETN_Otros_H    = sum(str_detect(ETN, "OTR.*") & esHombre, na.rm=T),
+        ETN_Otros_M    = sum(str_detect(ETN, "OTR.*") & esMujer, na.rm=T),
+        ETN_NoSabe_H   = sum(str_detect(ETN, "SABE.*|RESPONDE") & esHombre, na.rm=T),
+        ETN_NoSabe_M   = sum(str_detect(ETN, "SABE.*|RESPONDE") & esMujer, na.rm=T),
+        ETN_Aplica_H   = sum((str_detect(ETN, "APLICA") | ETN == "") & esHombre, na.rm=T),
+        ETN_Aplica_M   = sum((str_detect(ETN, "APLICA") | ETN == "") & esMujer, na.rm=T),
         
-        # Etnias Anuales (Búsqueda Exacta)
-        E_Indigena = sum(ETN == "INDÍGENA", na.rm = TRUE),
-        E_Mestizo  = sum(ETN == "MESTIZO/A", na.rm = TRUE),
-        E_Afro     = sum(ETN == "AFROECUATORIANO/AFRODESCENDIENTE", na.rm = TRUE),
-        E_Blanco   = sum(ETN == "BLANCO/A", na.rm = TRUE),
-        E_Mulato   = sum(ETN == "MULATO/A", na.rm = TRUE),
-        E_Montubio = sum(ETN == "MONTUBIO/A", na.rm = TRUE),
-        E_NoSabe   = sum(ETN == "NO SABE/NO RESPONDE", na.rm = TRUE),
-        E_NoAplica = sum(ETN == "NO APLICA", na.rm = TRUE),
-        E_Otro     = sum(ETN == "OTRO/A", na.rm = TRUE),
+        # NACIONALIDAD (16 ítems x 2 géneros = 32 variables) ----
+        NAC_Achuar_H      = sum(str_detect(NAC, "ACHUAR") & esHombre, na.rm=T),
+        NAC_Achuar_M      = sum(str_detect(NAC, "ACHUAR") & esMujer, na.rm=T),
+        NAC_Andoa_H       = sum(str_detect(NAC, "ANDOA") & esHombre, na.rm=T),
+        NAC_Andoa_M       = sum(str_detect(NAC, "ANDOA") & esMujer, na.rm=T),
+        NAC_Awa_H         = sum(str_detect(NAC, "AWA|AWÁ") & esHombre, na.rm=T),
+        NAC_Awa_M         = sum(str_detect(NAC, "AWA|AWÁ") & esMujer, na.rm=T),
+        NAC_Chachi_H      = sum(str_detect(NAC, "CHACHI") & esHombre, na.rm=T),
+        NAC_Chachi_M      = sum(str_detect(NAC, "CHACHI") & esMujer, na.rm=T),
+        NAC_Cofan_H       = sum(str_detect(NAC, "COFAN|COFÁN") & esHombre, na.rm=T),
+        NAC_Cofan_M       = sum(str_detect(NAC, "COFAN|COFÁN") & esMujer, na.rm=T),
+        NAC_Epera_H       = sum(str_detect(NAC, "EPERA") & esHombre, na.rm=T),
+        NAC_Epera_M       = sum(str_detect(NAC, "EPERA") & esMujer, na.rm=T),
+        NAC_Huancavilca_H = sum(str_detect(NAC, "HUANCAVILCA") & esHombre, na.rm=T),
+        NAC_Huancavilca_M = sum(str_detect(NAC, "HUANCAVILCA") & esMujer, na.rm=T),
+        NAC_Kichwa_H      = sum(str_detect(NAC, "KICHWA|QUICHUA") & esHombre, na.rm=T),
+        NAC_Kichwa_M      = sum(str_detect(NAC, "KICHWA|QUICHUA") & esMujer, na.rm=T),
+        NAC_Secoya_H      = sum(str_detect(NAC, "SECOYA") & esHombre, na.rm=T),
+        NAC_Secoya_M      = sum(str_detect(NAC, "SECOYA") & esMujer, na.rm=T),
+        NAC_Shiwiar_H     = sum(str_detect(NAC, "SHIWIAR") & esHombre, na.rm=T),
+        NAC_Shiwiar_M     = sum(str_detect(NAC, "SHIWIAR") & esMujer, na.rm=T),
+        NAC_Shuar_H       = sum(str_detect(NAC, "SHUAR") & esHombre, na.rm=T),
+        NAC_Shuar_M       = sum(str_detect(NAC, "SHUAR") & esMujer, na.rm=T),
+        NAC_Tsachila_H    = sum(str_detect(NAC, "TS.*CHILA") & esHombre, na.rm=T),
+        NAC_Tsachila_M    = sum(str_detect(NAC, "TS.*CHILA") & esMujer, na.rm=T),
+        NAC_Waorani_H     = sum(str_detect(NAC, "WAORANI|HUAORANI") & esHombre, na.rm=T),
+        NAC_Waorani_M     = sum(str_detect(NAC, "WAORANI|HUAORANI") & esMujer, na.rm=T),
+        NAC_Zapara_H      = sum(str_detect(NAC, "ZAPARA") & esHombre, na.rm=T),
+        NAC_Zapara_M      = sum(str_detect(NAC, "ZAPARA") & esMujer, na.rm=T),
+        NAC_NoSabe_H      = sum(str_detect(NAC, "SABE.*|RESPONDE") & esHombre, na.rm=T),
+        NAC_NoSabe_M      = sum(str_detect(NAC, "SABE.*|RESPONDE") & esMujer, na.rm=T),
+        NAC_NoAplica_H    = sum((str_detect(NAC, "APLICA") | NAC == "") & esHombre, na.rm=T),
+        NAC_NoAplica_M    = sum((str_detect(NAC, "APLICA") | NAC == "") & esMujer, na.rm=T),
+        
+        # PUEBLO (20 ítems x 2 géneros = 40 variables) ----
+        PUE_Chibuleo_H       = sum(str_detect(PUE, "CHIBULEO") & esHombre, na.rm=T),
+        PUE_Chibuleo_M       = sum(str_detect(PUE, "CHIBULEO") & esMujer, na.rm=T),
+        PUE_Huancavilca_H    = sum(str_detect(PUE, "HUANCAVILCA") & esHombre, na.rm=T),
+        PUE_Huancavilca_M    = sum(str_detect(PUE, "HUANCAVILCA") & esMujer, na.rm=T),
+        PUE_Kanari_H         = sum(str_detect(PUE, "KA.*ARI|CA.*ARI") & esHombre, na.rm=T),
+        PUE_Kanari_M         = sum(str_detect(PUE, "KA.*ARI|CA.*ARI") & esMujer, na.rm=T),
+        PUE_Karanki_H        = sum(str_detect(PUE, "KARANKI") & esHombre, na.rm=T),
+        PUE_Karanki_M        = sum(str_detect(PUE, "KARANKI") & esMujer, na.rm=T),
+        PUE_Kayambi_H        = sum(str_detect(PUE, "KAYAMBI") & esHombre, na.rm=T),
+        PUE_Kayambi_M        = sum(str_detect(PUE, "KAYAMBI") & esMujer, na.rm=T),
+        PUE_KichwaAmaz_H     = sum(str_detect(PUE, "KICHWA AMAZ.*") & esHombre, na.rm=T),
+        PUE_KichwaAmaz_M     = sum(str_detect(PUE, "KICHWA AMAZ.*") & esMujer, na.rm=T),
+        PUE_Kisapincha_H     = sum(str_detect(PUE, "KISAPINCHA|QUISAPINCHA") & esHombre, na.rm=T),
+        PUE_Kisapincha_M     = sum(str_detect(PUE, "KISAPINCHA|QUISAPINCHA") & esMujer, na.rm=T),
+        PUE_Kitukara_H       = sum(str_detect(PUE, "KITUKARA") & esHombre, na.rm=T),
+        PUE_Kitukara_M       = sum(str_detect(PUE, "KITUKARA") & esMujer, na.rm=T),
+        PUE_Natabuela_H      = sum(str_detect(PUE, "NATABUELA") & esHombre, na.rm=T),
+        PUE_Natabuela_M      = sum(str_detect(PUE, "NATABUELA") & esMujer, na.rm=T),
+        PUE_Otavalo_H        = sum(str_detect(PUE, "OTAVALO") & esHombre, na.rm=T),
+        PUE_Otavalo_M        = sum(str_detect(PUE, "OTAVALO") & esMujer, na.rm=T),
+        PUE_Paltas_H         = sum(str_detect(PUE, "PALTAS") & esHombre, na.rm=T),
+        PUE_Paltas_M         = sum(str_detect(PUE, "PALTAS") & esMujer, na.rm=T),
+        PUE_Panzaleo_H       = sum(str_detect(PUE, "PANZALEO") & esHombre, na.rm=T),
+        PUE_Panzaleo_M       = sum(str_detect(PUE, "PANZALEO") & esMujer, na.rm=T),
+        PUE_Pastos_H         = sum(str_detect(PUE, "PASTOS") & esHombre, na.rm=T),
+        PUE_Pastos_M         = sum(str_detect(PUE, "PASTOS") & esMujer, na.rm=T),
+        PUE_Puruha_H         = sum(str_detect(PUE, "PURUH.*") & esHombre, na.rm=T),
+        PUE_Puruha_M         = sum(str_detect(PUE, "PURUH.*") & esMujer, na.rm=T),
+        PUE_Salasaca_H       = sum(str_detect(PUE, "SALASA.*") & esHombre, na.rm=T),
+        PUE_Salasaca_M       = sum(str_detect(PUE, "SALASA.*") & esMujer, na.rm=T),
+        PUE_Saraguro_H       = sum(str_detect(PUE, "SARAGURO") & esHombre, na.rm=T),
+        PUE_Saraguro_M       = sum(str_detect(PUE, "SARAGURO") & esMujer, na.rm=T),
+        PUE_Tomabela_H       = sum(str_detect(PUE, "TOMABELA") & esHombre, na.rm=T),
+        PUE_Tomabela_M       = sum(str_detect(PUE, "TOMABELA") & esMujer, na.rm=T),
+        PUE_Waramka_H        = sum(str_detect(PUE, "WARAMKA|GUARANCA") & esHombre, na.rm=T),
+        PUE_Waramka_M        = sum(str_detect(PUE, "WARAMKA|GUARANCA") & esMujer, na.rm=T),
+        PUE_NoSabe_H         = sum(str_detect(PUE, "SABE.*|RESPONDE") & esHombre, na.rm=T),
+        PUE_NoSabe_M         = sum(str_detect(PUE, "SABE.*|RESPONDE") & esMujer, na.rm=T),
+        PUE_NoAplica_H       = sum((str_detect(PUE, "APLICA") | PUE == "") & esHombre, na.rm=T),
+        PUE_NoAplica_M       = sum((str_detect(PUE, "APLICA") | PUE == "") & esMujer, na.rm=T),
         
         .groups = 'drop'
       ) %>%
-      arrange(desc(TOTAL_ANUAL)) %>%
-      head(100)
+      arrange(desc(TOTAL)) %>%
+      head(50) # Corte exacto al Top 50 para optimización
     
-    # --- CONSTRUCCIÓN DE LA MATRIZ 100x26 ---
-    matriz_100_demografica <- matrix("", nrow = 100, ncol = 26)
-    matriz_100_etnias <- matrix("", nrow = 100, ncol = 10)
+    # 1. VECTORIZACIÓN Y COERCIÓN NUMÉRICA (na_if previene errores de texto en Sheets) ----
+    df_cie_des_hm <- resumen_enfermedades %>% 
+      select(CIE, DES, Hombres_Mes, Mujeres_Mes) %>% 
+      mutate(across(c(Hombres_Mes, Mujeres_Mes), ~na_if(., 0)))
     
-    for(i in 1:min(100, nrow(resumen_enfermedades))) {
-      row <- resumen_enfermedades[i, ]
-      matriz_100_demografica[i, 1] <- row$CIE
-      matriz_100_demografica[i, 2] <- row$DES
-      
-      # Inyectamos solo si es mayor a 0 para no llenar de ceros
-      if(row$H_1 > 0) matriz_100_demografica[i, 3] <- row$H_1;   if(row$M_1 > 0) matriz_100_demografica[i, 4] <- row$M_1
-      if(row$H_2 > 0) matriz_100_demografica[i, 5] <- row$H_2;   if(row$M_2 > 0) matriz_100_demografica[i, 6] <- row$M_2
-      if(row$H_3 > 0) matriz_100_demografica[i, 7] <- row$H_3;   if(row$M_3 > 0) matriz_100_demografica[i, 8] <- row$M_3
-      if(row$H_4 > 0) matriz_100_demografica[i, 9] <- row$H_4;   if(row$M_4 > 0) matriz_100_demografica[i, 10] <- row$M_4
-      if(row$H_5 > 0) matriz_100_demografica[i, 11] <- row$H_5;  if(row$M_5 > 0) matriz_100_demografica[i, 12] <- row$M_5
-      if(row$H_6 > 0) matriz_100_demografica[i, 13] <- row$H_6;  if(row$M_6 > 0) matriz_100_demografica[i, 14] <- row$M_6
-      if(row$H_7 > 0) matriz_100_demografica[i, 15] <- row$H_7;  if(row$M_7 > 0) matriz_100_demografica[i, 16] <- row$M_7
-      if(row$H_8 > 0) matriz_100_demografica[i, 17] <- row$H_8;  if(row$M_8 > 0) matriz_100_demografica[i, 18] <- row$M_8
-      if(row$H_9 > 0) matriz_100_demografica[i, 19] <- row$H_9;  if(row$M_9 > 0) matriz_100_demografica[i, 20] <- row$M_9
-      if(row$H_10 > 0) matriz_100_demografica[i, 21] <- row$H_10; if(row$M_10 > 0) matriz_100_demografica[i, 22] <- row$M_10
-      if(row$H_11 > 0) matriz_100_demografica[i, 23] <- row$H_11; if(row$M_11 > 0) matriz_100_demografica[i, 24] <- row$M_11
-      if(row$H_12 > 0) matriz_100_demografica[i, 25] <- row$H_12; if(row$M_12 > 0) matriz_100_demografica[i, 26] <- row$M_12
-      
-      if(row$E_Indigena > 0) matriz_100_etnias[i, 1] <- row$E_Indigena
-      if(row$E_Mestizo > 0)  matriz_100_etnias[i, 2] <- row$E_Mestizo
-      if(row$E_Afro > 0)     matriz_100_etnias[i, 3] <- row$E_Afro
-      if(row$E_Montubio > 0) matriz_100_etnias[i, 4] <- row$E_Montubio
-      if(row$E_Mulato > 0)   matriz_100_etnias[i, 5] <- row$E_Mulato
-      if(row$E_Blanco > 0)   matriz_100_etnias[i, 7] <- row$E_Blanco
-      if(row$E_NoAplica > 0) matriz_100_etnias[i, 8] <- row$E_NoAplica
-      if(row$E_NoSabe > 0)   matriz_100_etnias[i, 9] <- row$E_NoSabe
-      if(row$E_Otro > 0)     matriz_100_etnias[i, 10] <- row$E_Otro
-    }
+    df_etn <- resumen_enfermedades %>% 
+      select(starts_with("ETN_")) %>% 
+      mutate(across(everything(), ~na_if(., 0)))
     
-    # Conversión a números puros
-    df_100_demografica <- as.data.frame(matriz_100_demografica)
-    df_100_demografica[, 3:ncol(df_100_demografica)] <- lapply(df_100_demografica[, 3:ncol(df_100_demografica)], as.numeric)
+    df_nac <- resumen_enfermedades %>% 
+      select(starts_with("NAC_")) %>% 
+      mutate(across(everything(), ~na_if(., 0)))
     
-    df_100_etnias <- as.data.frame(matriz_100_etnias)
-    df_100_etnias[] <- lapply(df_100_etnias, as.numeric)
+    df_pue <- resumen_enfermedades %>% 
+      select(starts_with("PUE_")) %>% 
+      mutate(across(everything(), ~na_if(., 0)))
     
-    # --- ESCRITURA EN BLOQUE GIGANTE ---
-    range_write(ss = id_google_sheet, data = df_100_demografica, range = paste0("PRINCI-MORBI!B", fila_100), col_names = FALSE, reformat = FALSE)
-    range_write(ss = id_google_sheet, data = df_100_etnias, range = paste0("PRINCI-MORBI!AF", fila_100), col_names = FALSE, reformat = FALSE)
+    # 2. ESCRITURA MASIVA Y QUIRÚRGICA (Nube Nativa) ----
+    fila_objetivo <- 64 + (mes_actual_num - 1) * 58
+    
+    # ⚠️ AVISO ARQUITECTURA: Se utiliza range_write estándar para plena compatibilidad 
+    # con GitHub Actions, garantizando la inyección masiva en la API de Google.
+    range_write(ss = id_google_sheet, data = as.data.frame(df_cie_des_hm), range = paste0("PRINCI-MORBI!", col_cie, fila_objetivo), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = as.data.frame(df_etn), range = paste0("PRINCI-MORBI!", col_etn, fila_objetivo), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = as.data.frame(df_nac), range = paste0("PRINCI-MORBI!", col_nac, fila_objetivo), col_names = FALSE, reformat = FALSE)
+    range_write(ss = id_google_sheet, data = as.data.frame(df_pue), range = paste0("PRINCI-MORBI!", col_pue, fila_objetivo), col_names = FALSE, reformat = FALSE)
   }
   
-  # 4. EJECUTAMOS LOS DOS MOTORES (Medicina y Odontología)
+  # ====================================================================
+  # PASO 3. EJECUTAR LOS MOTORES (Inyección Dinámica de Coordenadas X)
+  # ====================================================================
   base_med <- base_limpia %>% filter(esMed)
   base_odo <- base_limpia %>% filter(esOdo)
   
-  procesar_motor_anual(base_med, 6, "Medicina")
-  procesar_motor_anual(base_odo, 112, "Odontología")
+  procesar_motor(base_med, "B", "F", "AB", "BJ")    # Coordenadas Medicina
+  procesar_motor(base_odo, "DB", "DF", "EB", "FJ")  # Coordenadas Odontología
   
-  cat("✅ Trabajador 9 finalizado. Perfil Epidemiológico Anual (Med y Odo) cuadrado a la perfección.\n")
+  cat("✅ Trabajador 9 finalizado. Perfiles Epidemiológicos Top 50 (ELT) actualizados en cajones mensuales.\n")
 }
