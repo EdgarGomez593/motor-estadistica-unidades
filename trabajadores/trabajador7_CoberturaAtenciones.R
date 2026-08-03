@@ -30,7 +30,9 @@ trabajador7_CoberturaAtenciones <- function(tabla_consolidada, id_google_sheet, 
     )
   
   # 2. FILTRO UNIVERSAL (Médicos, Obstetras, Odontólogos y Psicólogos)
-  esp_validas <- "MEDICIN|MÉDIC|OBSTETR|PSICOLOG|ODONTO"
+  # ⚠️ AVISO DE ARQUITECTURA: Radar mejorado por la dirección del proyecto con comodín (.*) 
+  # para máxima tolerancia a fallos de codificación en servidores nube (Ej: MÃ‰DICO)
+  esp_validas <- "MEDICIN|M.*DIC|OBSTETR|PSICOLOG|ODONTO"
   
   base_filtrada <- base_limpia %>%
     filter(str_detect(ESP, esp_validas))
@@ -42,7 +44,9 @@ trabajador7_CoberturaAtenciones <- function(tabla_consolidada, id_google_sheet, 
     mutate(
       cajon = case_when(
         LUG == "ESTABLECIMIENTO DE SALUD" ~ "est",
-        LUG %in% c("CENTROS EDUCATIVOS", "CENTROS DE EDUCACIÓN INICIAL", "CENTROS DE EDUCACION INICIAL", "ESCUELAS, INTERCULTURALES FAMILIARES COMUNITARIAS") ~ "edu",
+        # ⚠️ AVISO DE ARQUITECTURA: Modificado a str_detect() para habilitar el uso 
+        # del comodín (.*) y blindar la palabra "EDUCACIÓN" contra corrupción de tildes.
+        str_detect(LUG, "CENTROS EDUCATIVOS|CENTROS DE EDUCACI.*N INICIAL|ESCUELAS") ~ "edu",
         LUG == "CENTROS DE DESARROLLO INFANTIL - CDI" ~ "cdi",
         LUG == "CRECIENDO CON NUESTROS HIJOS CNH" ~ "cnh",
         LUG == "COMUNIDAD" ~ "com",
