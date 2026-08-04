@@ -1,159 +1,198 @@
 # ====================================================================================
-# TRABAJADOR 11: INTELIGENCIA OPERATIVA DEL ESTADO NUTRICIONAL
-# Arquitectura: Clasificador por Edades (Niños) y Filtro Prenatal (Embarazadas)
-# Secreto de Producción: Se respetan las filas 7, 18 y 28 (TOTALES)
+# TRABAJADOR 11: MOTOR DE ESTADO NUTRICIONAL E INTERCULTURALIDAD EXPANDIDA
+# Arquitectura: Matriz Vertical de 4 Filas (Aguda, Crónica, Sobrepeso, Anemia)
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
-trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
-  cat("🍼 Trabajador 11 activado: Calculando Inteligencia Nutricional...\n")
+trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = NULL) {
   
-  # 1. MAPA DE MESES
-  mes_actual_num <- mes_objetivo
+  cat(paste0("🍼 Trabajador 11 activado: Calculando Inteligencia Nutricional para el mes ", mes_objetivo, "...\n"))
   
-  col_destino_num <- mes_actual_num + 1
-  letras_columnas <- c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M")
-  letra_col <- letras_columnas[col_destino_num]
+  # Si es un mes de Trimestre (13, 14, 15, 16), el Trabajador 11 se apaga, porque él opera mes a mes.
+  if(mes_objetivo > 12) {
+    cat("⏭️ Trabajador 11: Modo Trimestral detectado. Omitiendo proceso para proteger los históricos.\n")
+    return(invisible(NULL))
+  }
   
-  # 2. BLINDAJE DE COLUMNAS
+  # ============================================================================
+  # 1. RADARES TOPOGRÁFICOS MAESTROS (Columnas)
+  # ============================================================================
+  col_destino_num <- mes_objetivo + 1
+  letra_col_conteo <- LETTERS[col_destino_num] # Columna B a M (Para los totales superiores)
+  
+  # ============================================================================
+  # 2. RADARES DE CABECERAS Y PURIFICADORES ANTI-NA
+  # ============================================================================
   nombres_cols <- names(tabla_consolidada)
-  if (!"PCTE_ANIOS_EN_MESES" %in% nombres_cols) tabla_consolidada$PCTE_ANIOS_EN_MESES <- NA
-  if (!"PCTE_GRP_PRI" %in% nombres_cols) tabla_consolidada$PCTE_GRP_PRI <- ""
-  if (!"PCTE_IND_ANEMIA_HEMOGLOBINA" %in% nombres_cols) tabla_consolidada$PCTE_IND_ANEMIA_HEMOGLOBINA <- ""
-  if (!"PCTE_AUTID_ETN" %in% nombres_cols) tabla_consolidada$PCTE_AUTID_ETN <- ""
-  if (!"ATEMED_TIP_DIAG" %in% nombres_cols) tabla_consolidada$ATEMED_TIP_DIAG <- tabla_consolidada$ATEMED_TIPO_DIAG
   
-  # 3. LIMPIEZA GENERAL (¡Sin Guillotina, es conteo de atenciones totales!)
-  base_limpia <- tabla_consolidada %>%
+  # Definición estricta de columnas para evitar fugas
+  col_edad_meses <- if(any(str_detect(nombres_cols, "PCTE_ANIOS_EN_MESES"))) nombres_cols[str_detect(nombres_cols, "PCTE_ANIOS_EN_MESES")][1] else { tabla_consolidada$PCTE_ANIOS_EN_MESES <- NA; "PCTE_ANIOS_EN_MESES" }
+  col_grp_pri <- if(any(str_detect(nombres_cols, "PCTE_GRP_PRI"))) nombres_cols[str_detect(nombres_cols, "PCTE_GRP_PRI")][1] else { tabla_consolidada$PCTE_GRP_PRI <- ""; "PCTE_GRP_PRI" }
+  col_hemo <- if(any(str_detect(nombres_cols, "PCTE_IND_ANEMIA_HEMOGLOBINA"))) nombres_cols[str_detect(nombres_cols, "PCTE_IND_ANEMIA_HEMOGLOBINA")][1] else { tabla_consolidada$PCTE_IND_ANEMIA_HEMOGLOBINA <- ""; "PCTE_IND_ANEMIA_HEMOGLOBINA" }
+  col_imc <- if(any(str_detect(nombres_cols, "PCTE_ULT_IMC$"))) nombres_cols[str_detect(nombres_cols, "PCTE_ULT_IMC$")][1] else { tabla_consolidada$PCTE_ULT_IMC <- NA; "PCTE_ULT_IMC" }
+  col_tip_diag <- if(any(str_detect(nombres_cols, "ATEMED_TIP_DIAG|ATEMED_TIPO_DIAG"))) nombres_cols[str_detect(nombres_cols, "ATEMED_TIP_DIAG|ATEMED_TIPO_DIAG")][1] else { tabla_consolidada$ATEMED_TIP_DIAG <- ""; "ATEMED_TIP_DIAG" }
+  
+  # Radares Interculturales
+  col_etn <- if(any(str_detect(nombres_cols, "PCTE_AUT"))) nombres_cols[str_detect(nombres_cols, "PCTE_AUT")][1] else if(any(str_detect(nombres_cols, "ETNICA|AUTOIDENTIFICACION"))) nombres_cols[str_detect(nombres_cols, "ETNICA|AUTOIDENTIFICACION")][1] else { tabla_consolidada$PCTE_AUTID_ETN <- ""; "PCTE_AUTID_ETN" }
+  col_nac <- if(any(str_detect(nombres_cols, "PCTE_NAC_ETN"))) "PCTE_NAC_ETN" else if(any(str_detect(nombres_cols, "NACIONALIDAD"))) nombres_cols[str_detect(nombres_cols, "NACIONALIDAD")][1] else { tabla_consolidada$PCTE_NAC_ETN <- ""; "PCTE_NAC_ETN" }
+  col_pue <- if(any(str_detect(nombres_cols, "PCTE_PUEBLO"))) "PCTE_PUEBLO" else if(any(str_detect(nombres_cols, "PUEBLO"))) nombres_cols[str_detect(nombres_cols, "PUEBLO")][1] else { tabla_consolidada$PCTE_PUEBLO <- ""; "PCTE_PUEBLO" }
+  
+  # ============================================================================
+  # 3. BASE MAESTRA Y DICCIONARIOS DE ALTA EFICIENCIA
+  # ============================================================================
+  base_maestra <- tabla_consolidada %>%
     mutate(
-      EDAD_MESES = as.numeric(PCTE_ANIOS_EN_MESES),
-      CIE = str_squish(str_remove_all(toupper(ATEMED_CIE10), "[\r\n\"\\.]")),
-      GRP = str_squish(str_remove_all(toupper(PCTE_GRP_PRI), "[\r\n\"]")),
-      HEMO = str_squish(str_remove_all(toupper(PCTE_IND_ANEMIA_HEMOGLOBINA), "[\r\n\"]")),
-      TIP = str_squish(str_remove_all(toupper(ATEMED_TIP_DIAG), "[\r\n\"]")),
-      CR = str_squish(str_remove_all(toupper(ATEMED_CRON_DIAG), "[\r\n\"]")),
-      ETN = str_squish(str_remove_all(toupper(PCTE_AUTID_ETN), "[\r\n\"]"))
-    )
-  
-  # 4. CLASIFICADOR DE ETNIAS (Para las columnas Q=17 a Z=26)
-  letras_etnia <- c("Q","R","S","T","U","V","W","X","Y","Z")
-  
-  base_limpia <- base_limpia %>%
+      EDAD_MESES = as.numeric(ifelse(is.na(!!sym(col_edad_meses)), -1, !!sym(col_edad_meses))),
+      IMC = as.numeric(str_replace_all(ifelse(is.na(!!sym(col_imc)), -1, !!sym(col_imc)), ",", ".")),
+      CIE = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10)), "[\r\n\"\\.]")),
+      GRP = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_grp_pri)), "", !!sym(col_grp_pri))), "[\r\n\"]")),
+      HEMO = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_hemo)), "", !!sym(col_hemo))), "[\r\n\"]")),
+      TIP = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_tip_diag)), "", !!sym(col_tip_diag))), "[\r\n\"]")),
+      CRON = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CRON_DIAG), "", ATEMED_CRON_DIAG)), "[\r\n\"]")),
+      ETNIA = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_etn)), "NO APLICA", !!sym(col_etn))), "[\r\n\"]")),
+      NAC = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_nac)), "NO APLICA", !!sym(col_nac))), "[\r\n\"]")),
+      PUEB = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_pue)), "NO APLICA", !!sym(col_pue))), "[\r\n\"]"))
+    ) %>%
     mutate(
-      idx_Etnia = case_when(
-        str_detect(ETN, "INDIGENA|INDÍGENA") ~ 1,
-        str_detect(ETN, "MESTIZ") ~ 2,
-        str_detect(ETN, "AFRO") ~ 3,
-        str_detect(ETN, "MONTUB|MONTUV") ~ 4,
-        str_detect(ETN, "MULAT") ~ 5,
-        str_detect(ETN, "NEGR") ~ 6,
-        str_detect(ETN, "BLANC") ~ 7,
-        str_detect(ETN, "APLICA") ~ 8,
-        str_detect(ETN, "SABE|RESPONDE") ~ 9,
-        str_detect(ETN, "OTR") ~ 10,
-        TRUE ~ 10 # Por defecto a 'OTRO' para atrapar vacíos en Etnia si el paciente es válido
-      ),
-      esPrimeraGeneral = str_detect(CR, "PRIMER|^P$|^1$|^N$"),
+      # 🚀 DICCIONARIOS INTERCULTURALES (Blindaje Ortográfico Total .*)
+      iE = case_when(str_detect(ETNIA, 'AFRO.*') ~ 1, str_detect(ETNIA, 'BLANC.*') ~ 2, str_detect(ETNIA, 'IND.*GENA') ~ 3, str_detect(ETNIA, 'MESTIZ.*') ~ 4, str_detect(ETNIA, 'MONTUB.*|MONTUV.*') ~ 5, str_detect(ETNIA, 'MULAT.*') ~ 6, str_detect(ETNIA, 'NEGR.*') ~ 7, str_detect(ETNIA, 'OTR.*') ~ 8, str_detect(ETNIA, 'SABE.*|RESPONDE') ~ 9, str_detect(ETNIA, 'APLICA|^$') ~ 10, TRUE ~ 10),
+      iN = case_when(str_detect(NAC, 'ACHUAR') ~ 1, str_detect(NAC, 'ANDOA') ~ 2, str_detect(NAC, 'AWA|AWÁ') ~ 3, str_detect(NAC, 'CHACHI') ~ 4, str_detect(NAC, 'COF.*N|KOF.*N') ~ 5, str_detect(NAC, 'EPERA|.*PERA') ~ 6, str_detect(NAC, 'HUANCAVILCA') ~ 7, str_detect(NAC, 'KICH.*|QUICH.*') | str_detect(PUEB, 'CHIBULEO|SALASA|TOMABELA|KISAPINCHA|QUISAPINCHA|NATABUELA|OTAVALO|PURUH|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|PANZALEO|PASTOS|WARAMKA|GUARANCA|KA.*ARI|CA.*ARI') ~ 8, str_detect(NAC, 'SECOYA') ~ 9, str_detect(NAC, 'SHIWIAR') ~ 10, str_detect(NAC, 'SHUAR') ~ 11, str_detect(NAC, 'TS.*CHILA') ~ 12, str_detect(NAC, 'WAORANI|HUAORANI') ~ 13, str_detect(NAC, 'Z.*PARA') ~ 14, str_detect(NAC, 'SABE.*|RESPONDE') ~ 15, str_detect(NAC, 'APLICA|^$') ~ 16, TRUE ~ 16),
+      iP = case_when(str_detect(PUEB, 'CHIBULEO') ~ 1, str_detect(PUEB, 'HUANCAVILCA') ~ 2, str_detect(PUEB, 'KA.*ARI|CA.*ARI') ~ 3, str_detect(PUEB, 'KARANKI|CARANQUI') ~ 4, str_detect(PUEB, 'KAYAMBI|CAYAMBI') ~ 5, str_detect(PUEB, 'KICHWA AMAZ.*') ~ 6, str_detect(PUEB, 'KISAPINCHA|QUISAPINCHA') ~ 7, str_detect(PUEB, 'KITUKARA|QUITUCARA') ~ 8, str_detect(PUEB, 'NATABUELA') ~ 9, str_detect(PUEB, 'OTAVALO') ~ 10, str_detect(PUEB, 'PALTAS') ~ 11, str_detect(PUEB, 'PANZALEO') ~ 12, str_detect(PUEB, 'PASTOS') ~ 13, str_detect(PUEB, 'PURUH.*') ~ 14, str_detect(PUEB, 'SALASA.*') ~ 15, str_detect(PUEB, 'SARAGURO') ~ 16, str_detect(PUEB, 'TOMABELA') ~ 17, str_detect(PUEB, 'WARAMKA|GUARANCA') ~ 18, str_detect(PUEB, 'SABE.*|RESPONDE') ~ 19, str_detect(PUEB, 'APLICA|^$') ~ 20, TRUE ~ 20),
+      
+      # Reglas Clínicas Nutricionales (Se reintegra la Anemia para Niños)
+      esPrimeraGeneral = str_detect(CRON, "PRIMER|^P$|^1$|^N$"),
       esAguda = (CIE == "E441"),
       esCronica = (CIE %in% c("E43X", "E43")),
       esSobrepeso = (CIE %in% c("E660", "E669")),
       esAnemiaNino = (CIE %in% c("D46X", "D46"))
     )
   
-  # ====================================================================
-  # BLOQUE INFANTIL (Menores de 24 y Menores de 60 meses)
-  # ====================================================================
-  base_ninos <- base_limpia %>% filter(!is.na(EDAD_MESES))
+  # ============================================================================
+  # 4. EXTRACCIÓN Y SUMATORIA DE POBLACIONES
+  # ============================================================================
+  # Filtramos a los niños (INTOCABLE - Lógica de Pediatría preservada)
+  b_24 <- base_maestra %>% filter(EDAD_MESES >= 0 & EDAD_MESES < 24)
+  b_59 <- base_maestra %>% filter(EDAD_MESES >= 0 & EDAD_MESES < 60)
   
-  b_24 <- base_ninos %>% filter(EDAD_MESES < 24)
-  b_59 <- base_ninos %>% filter(EDAD_MESES < 60) # Incluye a los < 24
+  # 🏆 FILTRO DE EMBARAZADAS (Preservando el motor original y aplicando nuevos umbrales)
+  b_emb <- base_maestra %>% filter(str_detect(GRP, "EMBARAZADAS")) %>%
+    mutate(
+      # 1. Tu motor original de Primeras Consultas (Intocable)
+      esPrevEmbPrimera = (str_detect(TIP, "PREV") & str_detect(CIE, "^Z321|^Z34|^Z35") & esPrimeraGeneral),
+      
+      # 2. Motor Matemático de IMC (Nuevos Umbrales Clínicos amarrados a Primera Consulta)
+      esBajoPesoEmb = (IMC > 0 & IMC < 18 & esPrevEmbPrimera == TRUE),
+      esSobrepesoEmb = (IMC >= 25 & IMC <= 29.9 & esPrevEmbPrimera == TRUE),
+      esObesidadEmb = (IMC >= 30 & esPrevEmbPrimera == TRUE),
+      
+      # 3. Motor de Anemia
+      esAnemiaHemoEmb = str_detect(HEMO, "ANEMIA LEVE|ANEMIA MODERADA")
+    )
   
-  # Conteo Mensual
-  n24_pri <- nrow(b_24 %>% filter(esPrimeraGeneral))
-  n24_agu <- nrow(b_24 %>% filter(esAguda))
-  n24_cro <- nrow(b_24 %>% filter(esCronica))
-  n24_sob <- nrow(b_24 %>% filter(esSobrepeso))
+  # Totales Superiores (Para el cuadro inicial de la hoja)
+  t24_pri <- sum(b_24$esPrimeraGeneral, na.rm=T)
+  t24_cro <- sum(b_24$esCronica, na.rm=T)
+  t24_agu <- sum(b_24$esAguda, na.rm=T)
+  t24_sob <- sum(b_24$esSobrepeso, na.rm=T)
+  t24_ane <- sum(b_24$esAnemiaNino, na.rm=T) # 🚀 AÑADIDO: Anemia < 24m
   
-  n59_pri <- nrow(b_59 %>% filter(esPrimeraGeneral))
-  n59_agu <- nrow(b_59 %>% filter(esAguda))
-  n59_cro <- nrow(b_59 %>% filter(esCronica))
-  n59_sob <- nrow(b_59 %>% filter(esSobrepeso))
+  t59_pri <- sum(b_59$esPrimeraGeneral, na.rm=T)
+  t59_cro <- sum(b_59$esCronica, na.rm=T)
+  t59_agu <- sum(b_59$esAguda, na.rm=T)
+  t59_sob <- sum(b_59$esSobrepeso, na.rm=T)
   
-  # ====================================================================
-  # BLOQUE EMBARAZADAS
-  # ====================================================================
-  # 1. Clon de la Lógica del Trabajador 1 (Solo para contar las Primeras)
-  emb_pri <- nrow(base_limpia %>% filter(str_detect(TIP, "PREV") & str_detect(CIE, "^Z321|^Z34|^Z35") & esPrimeraGeneral))
+  tem_pri <- sum(b_emb$esPrevEmbPrimera, na.rm=T)
+  tem_obe <- sum(b_emb$esObesidadEmb, na.rm=T)
+  tem_baj <- sum(b_emb$esBajoPesoEmb, na.rm=T) # 🚀 AÑADIDO: Bajo Peso Emb
+  tem_sob <- sum(b_emb$esSobrepesoEmb, na.rm=T) # 🚀 AÑADIDO: Sobrepeso Emb
   
-  # 2. Patologías Maternas (Solo en grupo prioritario EMBARAZADAS)
-  b_emb <- base_limpia %>% filter(str_detect(GRP, "EMBARAZADAS"))
+  # ============================================================================
+  # 5. INYECCIÓN DEL CUADRO RESUMEN SUPERIOR (Nube Nativa)
+  # ============================================================================
+  fc <- function(x) { if (x > 0) return(x) else return(NA_real_) }
   
-  emb_ane <- nrow(b_emb %>% filter(str_detect(HEMO, "ANEMIA LEVE|ANEMIA MODERADA")))
-  emb_obe <- nrow(b_emb %>% filter(esSobrepeso)) # CIE E660 o E669
+  # 🎯 Cuadro Niños < 24 meses
+  range_write(ss = id_google_sheet, data = data.frame(fc(t24_pri)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "3"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(t24_cro)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "4"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(t24_agu)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "5"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(t24_sob)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "6"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(t24_ane)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "7"), col_names = FALSE, reformat = FALSE)
   
-  # ====================================================================
-  # ESCRITURA EN EL BLOQUE DE MESES (Columna Dinámica)
-  # ====================================================================
-  fc <- function(x) { if (x > 0) return(x) else return("") }
+  # 🎯 Cuadro Niños < 59 meses
+  range_write(ss = id_google_sheet, data = data.frame(fc(t59_pri)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "12"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(t59_cro)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "13"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(t59_agu)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "14"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(t59_sob)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "15"), col_names = FALSE, reformat = FALSE)
   
-  # Bloque 24 meses (Filas 3 a 6)
-  range_write(ss = id_google_sheet, data = data.frame(fc(n24_pri)), range = paste0("ESTADO_NUTRI!", letra_col, "3"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(fc(n24_cro)), range = paste0("ESTADO_NUTRI!", letra_col, "4"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(fc(n24_agu)), range = paste0("ESTADO_NUTRI!", letra_col, "5"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(fc(n24_sob)), range = paste0("ESTADO_NUTRI!", letra_col, "6"), col_names = FALSE, reformat = FALSE)
+  # 🎯 Cuadro Embarazadas
+  range_write(ss = id_google_sheet, data = data.frame(fc(tem_pri)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "23"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(tem_obe)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "25"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(tem_baj)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "26"), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = data.frame(fc(tem_sob)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "27"), col_names = FALSE, reformat = FALSE)
   
-  # Bloque 59 meses (Filas 12 a 15)
-  range_write(ss = id_google_sheet, data = data.frame(fc(n59_pri)), range = paste0("ESTADO_NUTRI!", letra_col, "12"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(fc(n59_cro)), range = paste0("ESTADO_NUTRI!", letra_col, "13"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(fc(n59_agu)), range = paste0("ESTADO_NUTRI!", letra_col, "14"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(fc(n59_sob)), range = paste0("ESTADO_NUTRI!", letra_col, "15"), col_names = FALSE, reformat = FALSE)
+  # ============================================================================
+  # 6. MOTOR DE MATRIZ VERTICAL INTERCULTURAL (Bloques de 4 Filas)
+  # ============================================================================
+  # Ecuaciones Topográficas Maestras
+  salto_filas <- (mes_objetivo - 1) * 8
   
-  # Bloque Embarazadas (Fila 23 y 25. La 28 es Anemia en el total, la 26 es en Etnias)
-  range_write(ss = id_google_sheet, data = data.frame(fc(emb_pri)), range = paste0("ESTADO_NUTRI!", letra_col, "23"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(fc(emb_obe)), range = paste0("ESTADO_NUTRI!", letra_col, "25"), col_names = FALSE, reformat = FALSE)
+  f_inicio_24 <- 35 + salto_filas
+  f_inicio_59 <- 132 + salto_filas
+  f_inicio_emb <- 229 + salto_filas
   
-  # ====================================================================
-  # ESCRITURA EN EL BLOQUE DE ETNIAS (Múltiples Columnas: Q a Z)
-  # ====================================================================
-  # Leemos el estado actual de las tablas de etnias (para sumar)
-  tabla_etnia_actual <- read_sheet(ss = id_google_sheet, sheet = "ESTADO_NUTRI", range = "Q3:Z26", col_names = FALSE)
-  
-  escribir_etnia <- function(base_filtro, indicador, fila_destino) {
-    for (i in 1:10) { # Recorremos los 10 grupos étnicos
-      # Contamos los casos en la base filtrada para esta etnia
-      conteo <- nrow(base_filtro %>% filter(!!sym(indicador) & idx_Etnia == i))
-      if (conteo > 0) {
-        # Fila destino en Sheets, ajustada a la matriz leída (que empieza en Q3)
-        fila_matriz <- fila_destino - 2 
-        # Valor existente + Nuevo conteo
-        valor_existente <- as.numeric(tabla_etnia_actual[fila_matriz, i])
-        if (is.na(valor_existente)) valor_existente <- 0
-        nuevo_valor <- valor_existente + conteo
-        
-        # Escribimos el nuevo acumulado
-        range_write(ss = id_google_sheet, data = data.frame(nuevo_valor), range = paste0("ESTADO_NUTRI!", letras_etnia[i], fila_destino), col_names = FALSE, reformat = FALSE)
-      }
-    }
+  # 🛡️ FUNCIÓN TOPOGRÁFICA REDISEÑADA (Añade "huecos" para no pisar las columnas de Totales)
+  construir_fila_plana <- function(base_filtro, indicador_logico) {
+    vE <- numeric(10); vN <- numeric(16); vP <- numeric(20)
+    
+    sub <- base_filtro %>% filter(!!sym(indicador_logico) == TRUE)
+    
+    for(i in 1:10) vE[i] <- sum(sub$iE == i, na.rm=T)
+    for(i in 1:16) vN[i] <- sum(sub$iN == i, na.rm=T)
+    for(i in 1:20) vP[i] <- sum(sub$iP == i, na.rm=T)
+    
+    # 🚀 LA TUERCA CLAVE: 
+    # vE (10 columnas) + 2 NA (Columnas L y M) + vN (16 columnas) + 2 NA (Columnas AD y AE) + vP (20 columnas).
+    # Total de la matriz: 50 Columnas exactas.
+    fila_completa <- c(vE, NA_real_, NA_real_, vN, NA_real_, NA_real_, vP)
+    fila_completa[fila_completa == 0] <- NA_real_
+    
+    return(fila_completa)
   }
   
-  escribir_etnia(b_24, "esAguda", 3)
-  escribir_etnia(b_24, "esCronica", 4)
-  escribir_etnia(b_24, "esSobrepeso", 5)
-  escribir_etnia(b_24, "esAnemiaNino", 6)
+  # 🏆 MATRIZ < 24 MESES (4 Filas exactas)
+  matriz_24 <- as.data.frame(matrix(NA_real_, nrow = 4, ncol = 50))
+  matriz_24[1, ] <- construir_fila_plana(b_24, "esAguda")
+  matriz_24[2, ] <- construir_fila_plana(b_24, "esCronica")
+  matriz_24[3, ] <- construir_fila_plana(b_24, "esSobrepeso")
+  matriz_24[4, ] <- construir_fila_plana(b_24, "esAnemiaNino")
   
-  escribir_etnia(b_59, "esAguda", 12)
-  escribir_etnia(b_59, "esCronica", 13)
-  escribir_etnia(b_59, "esSobrepeso", 14)
-  escribir_etnia(b_59, "esAnemiaNino", 15)
+  # 🏆 MATRIZ < 59 MESES (3 Filas exactas)
+  matriz_59 <- as.data.frame(matrix(NA_real_, nrow = 3, ncol = 50))
+  matriz_59[1, ] <- construir_fila_plana(b_59, "esAguda")
+  matriz_59[2, ] <- construir_fila_plana(b_59, "esCronica")
+  matriz_59[3, ] <- construir_fila_plana(b_59, "esSobrepeso")
   
-  # Obesidad materna y Anemia Hemo
-  b_emb$esObesidadCie <- (b_emb$CIE %in% c("E660", "E669"))
-  b_emb$esAnemiaHemo <- str_detect(b_emb$HEMO, "ANEMIA LEVE|ANEMIA MODERADA")
+  # 🏆 MATRIZ EMBARAZADAS (3 Filas exactas: Obesidad, Bajo Peso, Sobrepeso)
+  matriz_emb <- as.data.frame(matrix(NA_real_, nrow = 3, ncol = 50))
+  matriz_emb[1, ] <- construir_fila_plana(b_emb, "esObesidadEmb")
+  matriz_emb[2, ] <- construir_fila_plana(b_emb, "esBajoPesoEmb")
+  matriz_emb[3, ] <- construir_fila_plana(b_emb, "esSobrepesoEmb")
   
-  escribir_etnia(b_emb, "esObesidadCie", 25)
-  escribir_etnia(b_emb, "esAnemiaHemo", 26)
+  # Purificador de coerción numérica para evitar "Fantasmas NA" textuales en la API
+  matriz_24 <- matriz_24 %>% mutate(across(everything(), as.numeric))
+  matriz_59 <- matriz_59 %>% mutate(across(everything(), as.numeric))
+  matriz_emb <- matriz_emb %>% mutate(across(everything(), as.numeric))
   
-  cat("✅ Trabajador 11 finalizado. Matriz de Estado Nutricional actualizada.\n")
+  # ============================================================================
+  # 7. INYECCIÓN BLINDADA (Una sola llamada a la API por matriz de 4x50)
+  # ============================================================================
+  
+  # ⚠️ AVISO ARQUITECTURA: Se utiliza range_write estándar para plena compatibilidad 
+  range_write(ss = id_google_sheet, data = matriz_24, range = paste0("ESTADO_NUTRI!B", f_inicio_24), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = matriz_59, range = paste0("ESTADO_NUTRI!B", f_inicio_59), col_names = FALSE, reformat = FALSE)
+  range_write(ss = id_google_sheet, data = matriz_emb, range = paste0("ESTADO_NUTRI!B", f_inicio_emb), col_names = FALSE, reformat = FALSE)
+  
+  cat("✅ Trabajador 11 finalizado. Arquitectura topográfica desplegada con éxito en la nube.\n")
 }
