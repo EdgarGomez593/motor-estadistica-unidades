@@ -35,14 +35,16 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   
   base_limpia <- tabla_consolidada %>%
     filter(!is.na(ATEMED_ID) & str_trim(ATEMED_ID) != "") %>%
+
 mutate(
-      ESP = str_squish(str_remove_all(toupper(PROF_ESP_ATE), "[\r\n\"]")),
-      CIE = str_squish(str_remove_all(toupper(ATEMED_CIE10), "[\r\n\"\\.]")),
-      TIP = str_squish(str_remove_all(toupper(ATEMED_TIP_DIAG), "[\r\n\"]")),
-      CR = str_squish(str_remove_all(toupper(ATEMED_CRON_DIAG), "[\r\n\"]")),
-      CON = str_squish(str_remove_all(toupper(ATEMED_CON_DIAG), "[\r\n\"]")),
-      SEX = str_squish(str_remove_all(toupper(PCTE_SEXO), "[\r\n\"]"))
+      ESP = str_squish(str_remove_all(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE)), "[\r\n\"]")),
+      CIE = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10)), "[\r\n\"\\.]")),
+      TIP = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_TIP_DIAG), "", ATEMED_TIP_DIAG)), "[\r\n\"]")),
+      CR = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CRON_DIAG), "", ATEMED_CRON_DIAG)), "[\r\n\"]")),
+      CON = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CON_DIAG), "", ATEMED_CON_DIAG)), "[\r\n\"]")),
+      SEX = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_SEXO), "", PCTE_SEXO)), "[\r\n\"]"))
     ) %>%
+  
     # Filtros estructurales
     filter(str_detect(TIP, "MORBILIDAD")) %>%
     filter(str_detect(ESP, esp_validas))
@@ -66,8 +68,8 @@ mutate(
     filter(esHombre | esMujer)
   
   # 4. EXTRACCIÓN Y CONTEO (Primeras y Subsecuentes por Género)
-  conteo <- function(filtro_temporal, patologia, genero) {
-    nrow(base_identificada %>% filter(!!sym(filtro_temporal) & !!sym(patologia) & !!sym(genero)))
+conteo <- function(filtro_temporal, patologia, genero) {
+    sum(base_identificada[[filtro_temporal]] & base_identificada[[patologia]] & base_identificada[[genero]], na.rm = TRUE)
   }
   
   base_identificada$esPrimeraInicial <- base_identificada$esPrimera & base_identificada$esDefInicial
@@ -83,7 +85,7 @@ mutate(
   s_can_h <- conteo("esSubse", "esCancer", "esHombre"); s_can_m <- conteo("esSubse", "esCancer", "esMujer")
   
   # 5. ESCRITURA EN EXCEL
-  fc <- function(x) { if (x > 0) return(x) else return("") }
+fc <- function(x) { if (is.na(x) || x == 0) return(NA_real_) else return(x) }
   
   # Primeras
   range_write(ss = id_google_sheet, data = data.frame(fc(p_hta_h)), range = paste0("EMF. CRONICAS!", letra_h, "94"), col_names = FALSE, reformat = FALSE)
