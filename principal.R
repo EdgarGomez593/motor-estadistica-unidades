@@ -26,7 +26,6 @@ if (llave_json != "") {
 # ====================================================================================
 # 2. CONTRATACIÓN DE TRABAJADORES (Línea de Ensamblaje Completa)
 # ====================================================================================
-source("trabajadores/trabajador0_herramientas.R")
 source("trabajadores/trabajador1_embarazadas.R")
 source("trabajadores/trabajador2_general.R")
 source("trabajadores/trabajador3_edades.R")
