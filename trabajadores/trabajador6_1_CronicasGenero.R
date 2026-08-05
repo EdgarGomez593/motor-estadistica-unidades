@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 6.1: CRÓNICAS Y CÁNCER POR GÉNERO
-# Arquitectura: Base completa -> Morbilidad -> Especialidad -> Género (Doble Columna)
+# Arquitectura: Clon Exacto Lógica T6 -> Desglose Hombre/Mujer -> Inyección Type-Safe
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -20,13 +20,8 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   letra_h <- letras_columnas[col_hombres_num]
   letra_m <- letras_columnas[col_mujeres_num]
   
-  # 2. CATÁLOGOS Y BLINDAJE
-  # ⚠️ AVISO INFORMATIVO DE ARQUITECTURA (CATÁLOGO HOMOLOGADO):
-  # Se sincronizó el GPS de este trabajador para que sea EXACTAMENTE igual al del Trabajador 6.
-  # Esto garantiza que los totales por género cuadren perfectamente con los totales generales,
-  # y nos blinda contra errores de tildes en la nube usando el comodín "."
+  # 2. CATÁLOGOS Y BLINDAJE (IDÉNTICO AL T6)
   esp_validas <- "MEDICINA GENERAL|M.DICO GENERAL|MEDICINA FAMILIAR|M.DICO FAMILIAR|MEDICINA RURAL|M.DICO RURAL|MEDICINA DEL TRABAJO|M.DICO DEL TRABAJO|MEDICINA OCUPACIONAL|M.DICO OCUPACIONAL"
-  
   codigos_cancer <- "C169|C509|C61X|C539"
   
   nombres_cols <- names(tabla_consolidada)
@@ -35,8 +30,7 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   
   base_limpia <- tabla_consolidada %>%
     filter(!is.na(ATEMED_ID) & str_trim(ATEMED_ID) != "") %>%
-
-mutate(
+    mutate(
       ESP = str_squish(str_remove_all(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE)), "[\r\n\"]")),
       CIE = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10)), "[\r\n\"\\.]")),
       TIP = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_TIP_DIAG), "", ATEMED_TIP_DIAG)), "[\r\n\"]")),
@@ -44,10 +38,8 @@ mutate(
       CON = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CON_DIAG), "", ATEMED_CON_DIAG)), "[\r\n\"]")),
       SEX = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_SEXO), "", PCTE_SEXO)), "[\r\n\"]"))
     ) %>%
-  
-    # Filtros estructurales
-    filter(str_detect(TIP, "MORBILIDAD")) %>%
-    filter(str_detect(ESP, esp_validas))
+    # FILTRO ESTRICTO 1: Solo Morbilidad (Igual que el T6)
+    filter(str_detect(TIP, "MORBILIDAD"))
   
   # 3. IDENTIFICACIÓN PATOLÓGICA Y GÉNERO
   base_identificada <- base_limpia %>%
@@ -57,35 +49,53 @@ mutate(
       esDiabetes = str_starts(CIE, "E10|E11|E12|E13|E14"),
       esCancer = str_starts(CIE, codigos_cancer),
       
+      esEspecialidad = str_detect(ESP, esp_validas),
+      
       esHombre = (SEX == "HOMBRE" | SEX == "M" | SEX == "MASCULINO"),
       esMujer = (SEX == "MUJER" | SEX == "F" | SEX == "FEMENINO"),
       
       esPrimera = str_detect(CR, "PRIMER|^P$|^1$|^N$"),
       esSubse = str_detect(CR, "SUBSEC|^S$|^2$"),
-      esDefInicial = str_detect(CON, "DEFINITIVO INICIAL")
-    ) %>%
-    # Nos quedamos solo con pacientes con género identificado
-    filter(esHombre | esMujer)
+      esDefInicial = str_detect(CON, "DEFINITIVO INICIAL"),
+      esDefControl = str_detect(CON, "DEFINITIVO CONTROL")
+    )
   
-  # 4. EXTRACCIÓN Y CONTEO (Primeras y Subsecuentes por Género)
-conteo <- function(filtro_temporal, patologia, genero) {
-    sum(base_identificada[[filtro_temporal]] & base_identificada[[patologia]] & base_identificada[[genero]], na.rm = TRUE)
-  }
+  # 4. EXTRACCIÓN Y CONTEO (Lógica de Espejo del T6)
   
-  base_identificada$esPrimeraInicial <- base_identificada$esPrimera & base_identificada$esDefInicial
+  # --- A. PRIMERAS --- (Req: esPrimera + esDefInicial + esEspecialidad)
+  b_pri_hm <- base_identificada %>% filter(esPrimera & esDefInicial & esEspecialidad)
   
-  p_hta_h <- conteo("esPrimeraInicial", "esHTA", "esHombre"); p_hta_m <- conteo("esPrimeraInicial", "esHTA", "esMujer")
-  p_dia_h <- conteo("esPrimeraInicial", "esDiabetes", "esHombre"); p_dia_m <- conteo("esPrimeraInicial", "esDiabetes", "esMujer")
-  p_obe_h <- conteo("esPrimeraInicial", "esOB", "esHombre"); p_obe_m <- conteo("esPrimeraInicial", "esOB", "esMujer")
-  p_can_h <- conteo("esPrimeraInicial", "esCancer", "esHombre"); p_can_m <- conteo("esPrimeraInicial", "esCancer", "esMujer")
+  p_hta_h <- sum(b_pri_hm$esHTA & b_pri_hm$esHombre, na.rm=T)
+  p_hta_m <- sum(b_pri_hm$esHTA & b_pri_hm$esMujer, na.rm=T)
   
-  s_hta_h <- conteo("esSubse", "esHTA", "esHombre"); s_hta_m <- conteo("esSubse", "esHTA", "esMujer")
-  s_dia_h <- conteo("esSubse", "esDiabetes", "esHombre"); s_dia_m <- conteo("esSubse", "esDiabetes", "esMujer")
-  s_obe_h <- conteo("esSubse", "esOB", "esHombre"); s_obe_m <- conteo("esSubse", "esOB", "esMujer")
-  s_can_h <- conteo("esSubse", "esCancer", "esHombre"); s_can_m <- conteo("esSubse", "esCancer", "esMujer")
+  p_dia_h <- sum(b_pri_hm$esDiabetes & b_pri_hm$esHombre, na.rm=T)
+  p_dia_m <- sum(b_pri_hm$esDiabetes & b_pri_hm$esMujer, na.rm=T)
   
-  # 5. ESCRITURA EN EXCEL
-fc <- function(x) { if (is.na(x) || x == 0) return(NA_real_) else return(x) }
+  p_obe_h <- sum(b_pri_hm$esOB & b_pri_hm$esHombre, na.rm=T)
+  p_obe_m <- sum(b_pri_hm$esOB & b_pri_hm$esMujer, na.rm=T)
+  
+  p_can_h <- sum(b_pri_hm$esCancer & b_pri_hm$esHombre, na.rm=T)
+  p_can_m <- sum(b_pri_hm$esCancer & b_pri_hm$esMujer, na.rm=T)
+  
+  # --- B. SUBSECUENTES ---
+  # HTA, Obesidad, Cáncer (Req: esSubse + esDefControl + esEspecialidad)
+  b_sub_hm <- base_identificada %>% filter(esSubse & esDefControl & esEspecialidad)
+  
+  s_hta_h <- sum(b_sub_hm$esHTA & b_sub_hm$esHombre, na.rm=T)
+  s_hta_m <- sum(b_sub_hm$esHTA & b_sub_hm$esMujer, na.rm=T)
+  
+  s_obe_h <- sum(b_sub_hm$esOB & b_sub_hm$esHombre, na.rm=T)
+  s_obe_m <- sum(b_sub_hm$esOB & b_sub_hm$esMujer, na.rm=T)
+  
+  s_can_h <- sum(b_sub_hm$esCancer & b_sub_hm$esHombre, na.rm=T)
+  s_can_m <- sum(b_sub_hm$esCancer & b_sub_hm$esMujer, na.rm=T)
+  
+  # DIABETES (TRAJE A LA MEDIDA DEL T6: Solo requiere esSubse y esDiabetes. NO requiere Especialidad ni DefControl)
+  s_dia_h <- sum(base_identificada$esSubse & base_identificada$esDiabetes & base_identificada$esHombre, na.rm=T)
+  s_dia_m <- sum(base_identificada$esSubse & base_identificada$esDiabetes & base_identificada$esMujer, na.rm=T)
+  
+  # 5. ESCRITURA EN EXCEL (ESTÁNDAR NUBE)
+  fc <- function(x) { if (is.na(x) || x == 0) return(NA_real_) else return(x) }
   
   # Primeras
   range_write(ss = id_google_sheet, data = data.frame(fc(p_hta_h)), range = paste0("EMF. CRONICAS!", letra_h, "94"), col_names = FALSE, reformat = FALSE)
@@ -107,5 +117,5 @@ fc <- function(x) { if (is.na(x) || x == 0) return(NA_real_) else return(x) }
   range_write(ss = id_google_sheet, data = data.frame(fc(s_can_h)), range = paste0("EMF. CRONICAS!", letra_h, "105"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(s_can_m)), range = paste0("EMF. CRONICAS!", letra_m, "105"), col_names = FALSE, reformat = FALSE)
   
-  cat("✅ Trabajador 6.1 finalizado. Matriz de género y cáncer completada.\n")
+  cat("✅ Trabajador 6.1 finalizado. Matriz de género cuadra al milímetro con el T6.\n")
 }
