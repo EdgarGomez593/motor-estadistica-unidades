@@ -35,7 +35,7 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   
   base_limpia <- tabla_consolidada %>%
     filter(!is.na(ATEMED_ID) & str_trim(ATEMED_ID) != "") %>%
-    mutate(
+mutate(
       ESP = str_squish(str_remove_all(toupper(PROF_ESP_ATE), "[\r\n\"]")),
       CIE = str_squish(str_remove_all(toupper(ATEMED_CIE10), "[\r\n\"\\.]")),
       TIP = str_squish(str_remove_all(toupper(ATEMED_TIP_DIAG), "[\r\n\"]")),
