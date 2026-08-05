@@ -169,6 +169,8 @@ ejecutar_sala_situacional_maestra <- function() {
     
     # --- F. BUCLE DE PROCESAMIENTO MÚLTIPLE ---
     cat("🚀 INICIANDO DESPLIEGUE DE TRABAJADORES...\n")
+    
+    # ⚠️ REPARACIÓN DE ARQUITECTURA: Uso de listas nombradas para evitar NULLs fantasmas
     memoria_historica_trimestral <- list() 
     
     for (item in lista_archivos_validos) {
@@ -189,8 +191,8 @@ ejecutar_sala_situacional_maestra <- function() {
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
       cat("✅ Registros listos para mes", mes_objetivo, ":", nrow(base_mensual_consolidada), "\n")
       
-      # Alimentamos la Memoria Histórica
-      memoria_historica_trimestral[[mes_objetivo]] <- base_mensual_consolidada
+      # Alimentamos la Memoria Histórica usando el número real como nombre ("mes_3")
+      memoria_historica_trimestral[[as.character(mes_objetivo)]] <- base_mensual_consolidada
       
       # Despliegue Escudado de los 13 Trabajadores
       ejecutar_escudo(trabajador1_Embarazadas, "T1_Embarazadas", base_mensual_consolidada, id_google_sheet, mes_objetivo)
@@ -207,6 +209,7 @@ ejecutar_sala_situacional_maestra <- function() {
       ejecutar_escudo(trabajador11_EstadoNutricional, "T11_EstadoNutricional", base_mensual_consolidada, id_google_sheet, mes_objetivo)
       ejecutar_escudo(trabajador12_Violencia, "T12_Violencia", base_mensual_consolidada, id_google_sheet, mes_objetivo)
       ejecutar_escudo(trabajador13_AdolescentesRiesgo, "T13_AdolescentesRiesgo", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      
       
       # --- G. RADAR TRIMESTRAL PARA TRABAJADOR 14 (MODO SIGILO) ---
       # Si ejecutamos el "Mes Actual" y estamos en Cierre de Trimestre (Marzo, Junio, Sept, Dic)
@@ -230,14 +233,18 @@ ejecutar_sala_situacional_maestra <- function() {
               suppressMessages(drive_download(as_id(arch$id), path = nom_temp, overwrite = TRUE))
               cubeta_temp[[j]] <- read.csv(nom_temp, sep = ",", fileEncoding = "latin1")
             }
-            # Llenamos la memoria histórica con los meses pasados sin procesarlos por los demás trabajadores
-            memoria_historica_trimestral[[m_rescate]] <- bind_rows(cubeta_temp)
+            # Guardamos con nombre explícito ("mes_X") para evitar NULLs en R
+            memoria_historica_trimestral[[as.character(m_rescate)]] <- bind_rows(cubeta_temp)
           }
         }
       }
       
-      # Despliegue del Escuadrón 14 (Con su memoria llena)
-      ejecutar_escudo(trabajador14_Top10Intercultural, "T14_Top10Intercultural", base_mensual_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = memoria_historica_trimestral)
+      # Despliegue del Escuadrón 14 (Con su memoria llena y libre de NULLs)
+      # Para que T14 ordene los meses correctamente (ej. "10", "11", "12"), extraemos y ordenamos la lista
+      indices_ordenados <- sort(as.numeric(names(memoria_historica_trimestral)))
+      memoria_ordenada <- lapply(as.character(indices_ordenados), function(nm) memoria_historica_trimestral[[nm]])
+      
+      ejecutar_escudo(trabajador14_Top10Intercultural, "T14_Top10Intercultural", base_mensual_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = memoria_ordenada)
     }
     
     cat("\n🎉 ¡SISTEMA MAESTRO ACTUALIZADO CON ÉXITO!\n")
