@@ -44,7 +44,7 @@ trabajador6_CronicasCIE10 <- function(tabla_consolidada, id_google_sheet, mes_ob
     mutate(
       esHTA = str_starts(CIE, "I10"),
       esOB = str_starts(CIE, "E669"),
-      esDiabetes = str_starts(CIE, "E10|E11|E12|E13|E14"),
+      esDiabetes = str_detect(CIE, "^(E10|E11|E12|E13|E14)"),
       esEspecialidad = str_detect(ESP, esp_validas),
       esPrimera = str_detect(CR, "PRIMER|^P$|^1$|^N$"),
       esSubse = str_detect(CR, "SUBSEC|^S$|^2$"),
