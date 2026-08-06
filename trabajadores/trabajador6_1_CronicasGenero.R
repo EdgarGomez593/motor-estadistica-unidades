@@ -1,13 +1,13 @@
 # ====================================================================================
 # TRABAJADOR 6.1: CRÓNICAS Y CÁNCER POR GÉNERO
-# Arquitectura: Clon Exacto Lógica T6 -> Desglose Hombre/Mujer -> Inyección Type-Safe
+# Arquitectura: Clon Exacto del Apps Script Original -> Inyección Type-Safe Nube
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
 trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
-  cat("🧬 Trabajador 6.1 activado: Desagregando Crónicas y Cáncer por Género...\n")
+  cat("🧬 Trabajador 6.1 activado: Restaurando Lógica Original de Apps Script...\n")
   
   # 1. MAPA DE MESES (DOBLE COLUMNA)
   mes_anterior <- mes_objetivo
@@ -20,8 +20,9 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   letra_h <- letras_columnas[col_hombres_num]
   letra_m <- letras_columnas[col_mujeres_num]
   
-  # 2. CATÁLOGOS Y BLINDAJE (IDÉNTICO AL T6)
-  esp_validas <- "MEDICINA GENERAL|M.DICO GENERAL|MEDICINA FAMILIAR|M.DICO FAMILIAR|MEDICINA RURAL|M.DICO RURAL|MEDICINA DEL TRABAJO|M.DICO DEL TRABAJO|MEDICINA OCUPACIONAL|M.DICO OCUPACIONAL"
+  # 2. CATÁLOGO Y BLINDAJE (Clon de Apps Script con Protección de Tildes)
+  # ⚠️ Se retorna a las 3 especialidades originales para cuadrar los datos.
+  esp_validas <- "MEDICINA FAMILIAR Y COMUNITARIA|MEDICINA GENERAL|M.DICO GENERAL|MEDICINA RURAL|M.DICO RURAL"
   codigos_cancer <- "C169|C509|C61X|C539"
   
   nombres_cols <- names(tabla_consolidada)
@@ -38,7 +39,7 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
       CON = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CON_DIAG), "", ATEMED_CON_DIAG)), "[\r\n\"]")),
       SEX = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_SEXO), "", PCTE_SEXO)), "[\r\n\"]"))
     ) %>%
-    # FILTRO ESTRICTO 1: Solo Morbilidad (Igual que el T6)
+    # FILTRO ESTRICTO: Solo Morbilidad
     filter(str_detect(TIP, "MORBILIDAD"))
   
   # 3. IDENTIFICACIÓN PATOLÓGICA Y GÉNERO
@@ -56,11 +57,10 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
       
       esPrimera = str_detect(CR, "PRIMER|^P$|^1$|^N$"),
       esSubse = str_detect(CR, "SUBSEC|^S$|^2$"),
-      esDefInicial = str_detect(CON, "DEFINITIVO INICIAL"),
-      esDefControl = str_detect(CON, "DEFINITIVO CONTROL")
+      esDefInicial = str_detect(CON, "DEFINITIVO INICIAL")
     )
   
-  # 4. EXTRACCIÓN Y CONTEO (Lógica de Espejo del T6)
+  # 4. EXTRACCIÓN Y CONTEO (Lógica PURA de Apps Script)
   
   # --- A. PRIMERAS --- (Req: esPrimera + esDefInicial + esEspecialidad)
   b_pri_hm <- base_identificada %>% filter(esPrimera & esDefInicial & esEspecialidad)
@@ -77,22 +77,22 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   p_can_h <- sum(b_pri_hm$esCancer & b_pri_hm$esHombre, na.rm=T)
   p_can_m <- sum(b_pri_hm$esCancer & b_pri_hm$esMujer, na.rm=T)
   
-  # --- B. SUBSECUENTES ---
-  # HTA, Obesidad, Cáncer (Req: esSubse + esDefControl + esEspecialidad)
-  b_sub_hm <- base_identificada %>% filter(esSubse & esDefControl & esEspecialidad)
+  # --- B. SUBSECUENTES --- 
+  # ⚠️ REVERSIÓN ARQUITECTÓNICA: Se elimina la exigencia de "esDefControl".
+  # Se agrupa todo bajo `esSubse` y `esEspecialidad` (Incluyendo la Diabetes).
+  b_sub_hm <- base_identificada %>% filter(esSubse & esEspecialidad)
   
   s_hta_h <- sum(b_sub_hm$esHTA & b_sub_hm$esHombre, na.rm=T)
   s_hta_m <- sum(b_sub_hm$esHTA & b_sub_hm$esMujer, na.rm=T)
+  
+  s_dia_h <- sum(b_sub_hm$esDiabetes & b_sub_hm$esHombre, na.rm=T)
+  s_dia_m <- sum(b_sub_hm$esDiabetes & b_sub_hm$esMujer, na.rm=T)
   
   s_obe_h <- sum(b_sub_hm$esOB & b_sub_hm$esHombre, na.rm=T)
   s_obe_m <- sum(b_sub_hm$esOB & b_sub_hm$esMujer, na.rm=T)
   
   s_can_h <- sum(b_sub_hm$esCancer & b_sub_hm$esHombre, na.rm=T)
   s_can_m <- sum(b_sub_hm$esCancer & b_sub_hm$esMujer, na.rm=T)
-  
-  # DIABETES (TRAJE A LA MEDIDA DEL T6: Solo requiere esSubse y esDiabetes. NO requiere Especialidad ni DefControl)
-  s_dia_h <- sum(base_identificada$esSubse & base_identificada$esDiabetes & base_identificada$esHombre, na.rm=T)
-  s_dia_m <- sum(base_identificada$esSubse & base_identificada$esDiabetes & base_identificada$esMujer, na.rm=T)
   
   # 5. ESCRITURA EN EXCEL (ESTÁNDAR NUBE)
   fc <- function(x) { if (is.na(x) || x == 0) return(NA_real_) else return(x) }
@@ -117,5 +117,5 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   range_write(ss = id_google_sheet, data = data.frame(fc(s_can_h)), range = paste0("EMF. CRONICAS!", letra_h, "105"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(s_can_m)), range = paste0("EMF. CRONICAS!", letra_m, "105"), col_names = FALSE, reformat = FALSE)
   
-  cat("✅ Trabajador 6.1 finalizado. Matriz de género cuadra al milímetro con el T6.\n")
+  cat("✅ Trabajador 6.1 finalizado. Matriz de género cuadra al milímetro con el Apps Script original.\n")
 }
