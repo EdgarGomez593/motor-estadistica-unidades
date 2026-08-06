@@ -60,8 +60,8 @@ trabajador6_CronicasCIE10 <- function(tabla_consolidada, id_google_sheet, mes_ob
   hta_s <- nrow(base_identificada %>% filter(esSubse & esDefControl & esEspecialidad & esHTA))
   ob_s  <- nrow(base_identificada %>% filter(esSubse & esDefControl & esEspecialidad & esOB))
   
-  # TRAJE A LA MEDIDA: Diabetes subsecuente corre sin filtros extra de especialidad o control
-  dm_s  <- nrow(base_identificada %>% filter(esSubse & esDiabetes))
+  # TRAJE A LA MEDIDA: Diabetes subsecuente corre sin filtro de especialidad, pero SÍ requiere Definitivo Control
+  dm_s  <- nrow(base_identificada %>% filter(esSubse & esDefControl & esDiabetes))
   
   # 5. ESCRITURA EN EXCEL (ESTÁNDAR NUBE)
   
