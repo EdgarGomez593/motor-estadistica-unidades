@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 12: INTELIGENCIA OPERATIVA - VIOLENCIA FAMILIAR (MATRIZ ESPEJO)
-# Arquitectura: Visibilidad Total (T74 Global) -> Clasificación Intercultural -> Inyección Doble
+# Arquitectura: Visibilidad Total (T74 Global) -> Matriz Horizontal Expandida (138 Cols)
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -10,17 +10,20 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
   cat("🛡️ Trabajador 12 activado: Procesando Inteligencia Operativa - Violencia y Etnias...\n")
   
   # ====================================================================
-  # 1. ARQUITECTURA DE COORDENADAS (Triple Columna Dinámica)
+  # 1. ARQUITECTURA DE COORDENADAS (Salto Vertical Mensual)
   # ====================================================================
-  # Enero(1) = B(2), C(3), D(4) | Febrero(2) = E(5), F(6), G(7)
-  col_h_num <- (mes_objetivo - 1) * 3 + 2
-  col_m_num <- col_h_num + 1
-  col_l_num <- col_h_num + 2
+  # Enero(1) = 42 | Febrero(2) = 59 | Marzo(3) = 76...
+  fila_inicio_mes <- 42 + (mes_objetivo - 1) * 17
   
-  letras <- c(LETTERS, paste0("A", LETTERS)) # Soporte hasta la columna ZZ
-  letra_h <- letras[col_h_num]
-  letra_m <- letras[col_m_num]
-  letra_l <- letras[col_l_num]
+  # Función auxiliar para convertir número de columna a Letra (Soporte hasta ZZ)
+  num_a_letra <- function(n) {
+    res <- ""
+    while(n > 0) { rem <- (n - 1) %% 26; res <- paste0(LETTERS[rem + 1], res); n <- (n - 1) %/% 26 }
+    return(res)
+  }
+  
+  # La inyección horizontal siempre empieza en la columna C (Número 3)
+  letra_inicio_matriz <- num_a_letra(3)
   
   # ====================================================================
   # 2. RADAR DE CABECERAS (Tolerancia a variaciones y Escudos Anti-NA)
@@ -35,17 +38,10 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
   col_tip <- if(any(str_detect(nombres_cols, "ATEMED_TIP_DIAG|ATEMED_TIPO_DIAG"))) nombres_cols[str_detect(nombres_cols, "ATEMED_TIP_DIAG|ATEMED_TIPO_DIAG")][1] else { tabla_consolidada$ATEMED_TIP_DIAG <- ""; "ATEMED_TIP_DIAG" }
   
   # ====================================================================
-  # 3. PURGA Y MATRIZ ESPEJO (1 Diagnóstico = 1 Demografía)
+  # 3. PURGA Y MATRIZ ESPEJO (Sin Guillotina)
   # ====================================================================
   base_filtrada <- tabla_consolidada %>%
     filter(!is.na(ATEMED_ID) & str_trim(ATEMED_ID) != "") %>%
-    
-    # ====================================================================================
-    # ⚠️ TÍTULO DE CONTROL: APAGADO TEMPORAL DE GUILLOTINA (VISIBILIDAD TOTAL DE DIAGNÓSTICOS)
-    # Nota de Arquitectura: Actualmente el hashtag '#' está activo. Esto permite que si un 
-    # paciente tiene T741 y T742 el mismo día, AMBOS diagnósticos se cuenten arriba y abajo.
-    # Para cambiar a "1 Paciente = 1 Evento", simplemente borre el '#' de la línea inferior.
-    # ====================================================================================
     
     # distinct(ATEMED_ID, .keep_all = TRUE) %>% 
     
@@ -59,31 +55,21 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
       NAC = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_nac)), "", !!sym(col_nac))), "[\r\n\"]")),
       PUEB = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_pue)), "", !!sym(col_pue))), "[\r\n\"]"))
     ) %>%
-    # Filtro Estricto: Toda la Violencia (T74), Morbilidad y Primera Atención
     filter(str_starts(CIE, "T74") & str_detect(TIP, "MORB") & str_detect(CRON, "PRIMER|^P$|^1$|^N$")) %>%
-    # Lógica de Género con Prioridad LGBTI
     mutate(
       esLGBTI = str_detect(ORI, "GAY|LESBIANA|BISEXUAL|TRANS"),
       esHombre = !esLGBTI & str_detect(SEXO, "HOMBRE|^M$"),
-      esMujer = !esLGBTI & str_detect(SEXO, "MUJER|^F$")
+      esMujer = !esLGBTI & str_detect(SEXO, "MUJER|^F$"),
+      
+      idx_gen = case_when(esHombre ~ 1, esMujer ~ 2, esLGBTI ~ 3, TRUE ~ 0),
+      fCie = case_when(CIE=="T740" ~ 1, CIE=="T741" ~ 2, CIE=="T742" ~ 3, CIE=="T743" ~ 4, CIE=="T748" ~ 5, CIE=="T749" ~ 6, TRUE ~ 0)
     )
   
   # ====================================================================
-  # 4. EXTRACCIÓN DE DIAGNÓSTICOS (Para las Filas 3 al 8)
-  # ====================================================================
-  resumen_cie <- base_filtrada %>%
-    group_by(CIE) %>%
-    summarise(
-      h = sum(esHombre, na.rm = TRUE),
-      m = sum(esMujer, na.rm = TRUE),
-      l = sum(esLGBTI, na.rm = TRUE),
-      .groups = "drop"
-    )
-  
-  # ====================================================================
-  # 5. MAPEO DE CLASIFICADORES INTERCULTURALES (Regex Provincial Curso Selva)
+  # 4. MAPEO DE CLASIFICADORES INTERCULTURALES (Regex Curso Selva)
   # ====================================================================
   base_clasificada <- base_filtrada %>%
+    filter(idx_gen > 0 & fCie > 0) %>%
     mutate(
       iE = case_when(str_detect(ETNIA, 'AFRO.*') ~ 1, str_detect(ETNIA, 'BLANC.*') ~ 2, str_detect(ETNIA, 'IND.*GENA') ~ 3, str_detect(ETNIA, 'MESTIZ.*') ~ 4, str_detect(ETNIA, 'MONTUBI.*|MONTUVI.*') ~ 5, str_detect(ETNIA, 'MULAT.*') ~ 6, str_detect(ETNIA, 'NEGR.*') ~ 7, str_detect(ETNIA, 'OTR.*') ~ 8, str_detect(ETNIA, 'SABE.*|RESPONDE') ~ 9, str_detect(ETNIA, 'APLICA') | ETNIA == "" ~ 10, TRUE ~ 10),
       iN = case_when(str_detect(NAC, 'ACHUAR') ~ 1, str_detect(NAC, 'ANDOA') ~ 2, str_detect(NAC, 'AWA') ~ 3, str_detect(NAC, 'CHACHI') ~ 4, str_detect(NAC, 'COFAN') ~ 5, str_detect(NAC, 'EPERA') ~ 6, str_detect(NAC, 'HUANCAVILCA') ~ 7, str_detect(NAC, 'KICHWA') ~ 8, str_detect(NAC, 'SECOYA') ~ 9, str_detect(NAC, 'SHIWIAR') ~ 10, str_detect(NAC, 'SHUAR') ~ 11, str_detect(NAC, 'TS.*CHILA') ~ 12, str_detect(NAC, 'WAORANI|HUAORANI') ~ 13, str_detect(NAC, 'ZAPARA') ~ 14, str_detect(NAC, 'SABE.*|RESPONDE') ~ 15, str_detect(NAC, 'APLICA') | NAC == "" ~ 16, TRUE ~ 16),
@@ -91,56 +77,48 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
     )
   
   # ====================================================================
-  # 6. MATRIZ DE VECTORES EN BLOQUE (Aritmética Booleana)
+  # 5. CONSTRUCCIÓN DE LA SUPERMATRIZ (6 Filas x 138 Columnas)
   # ====================================================================
-  hE <- numeric(10); mE <- numeric(10); lE <- numeric(10)
-  hN <- numeric(16); mN <- numeric(16); lN <- numeric(16)
-  hP <- numeric(20); mP <- numeric(20); lP <- numeric(20)
+  matriz_gigante <- matrix(0, nrow = 6, ncol = 138)
   
-  for(i in 1:10) { hE[i] <- sum(base_clasificada$iE == i & base_clasificada$esHombre); mE[i] <- sum(base_clasificada$iE == i & base_clasificada$esMujer); lE[i] <- sum(base_clasificada$iE == i & base_clasificada$esLGBTI) }
-  for(i in 1:16) { hN[i] <- sum(base_clasificada$iN == i & base_clasificada$esHombre); mN[i] <- sum(base_clasificada$iN == i & base_clasificada$esMujer); lN[i] <- sum(base_clasificada$iN == i & base_clasificada$esLGBTI) }
-  for(i in 1:20) { hP[i] <- sum(base_clasificada$iP == i & base_clasificada$esHombre); mP[i] <- sum(base_clasificada$iP == i & base_clasificada$esMujer); lP[i] <- sum(base_clasificada$iP == i & base_clasificada$esLGBTI) }
+  if (nrow(base_clasificada) > 0) {
+    for (r in 1:nrow(base_clasificada)) {
+      fila <- base_clasificada[r, ]
+      
+      fC <- fila$fCie
+      gI <- fila$idx_gen - 1
+      
+      # Matemática de punteros
+      cE <- (fila$iE - 1) * 3 + gI + 1
+      cN <- 30 + (fila$iN - 1) * 3 + gI + 1
+      cP <- 78 + (fila$iP - 1) * 3 + gI + 1
+      
+      # Sumatoria
+      matriz_gigante[fC, cE] <- matriz_gigante[fC, cE] + 1
+      matriz_gigante[fC, cN] <- matriz_gigante[fC, cN] + 1
+      matriz_gigante[fC, cP] <- matriz_gigante[fC, cP] + 1
+    }
+  }
   
-  # Sanitización a NA_real_ (Protección de tableros)
-  fc <- function(x) { if (is.na(x) || x == 0) return(NA_real_) else return(x) }
-  formatear_bloque <- function(v) { v <- as.numeric(v); v[v == 0 | is.na(v)] <- NA_real_; return(v) }
-  
-  hE <- formatear_bloque(hE); mE <- formatear_bloque(mE); lE <- formatear_bloque(lE)
-  hN <- formatear_bloque(hN); mN <- formatear_bloque(mN); lN <- formatear_bloque(lN)
-  hP <- formatear_bloque(hP); mP <- formatear_bloque(mP); lP <- formatear_bloque(lP)
+  # ====================================================================
+  # 6. SANITIZACIÓN A NA_REAL_ (Misma lógica original de GitHub)
+  # ====================================================================
+  matriz_gigante[matriz_gigante == 0] <- NA_real_
+  df_inyeccion <- as.data.frame(matriz_gigante)
   
   # ====================================================================
   # 7. INYECCIÓN BLINDADA POR ZONAS (Nube Nativa)
   # ====================================================================
+  coordenada_objetivo <- paste0("VIOLENCIA!", letra_inicio_matriz, fila_inicio_mes)
   
-  # ZONA SUPERIOR: Diagnósticos (Filas 3 a 8)
-  mapa_filas <- c("T740" = 3, "T741" = 4, "T742" = 5, "T743" = 6, "T748" = 7, "T749" = 8)
+  # Manteniendo tu función range_write intacta y blindada
+  range_write(
+    ss = id_google_sheet, 
+    data = df_inyeccion, 
+    range = coordenada_objetivo, 
+    col_names = FALSE, 
+    reformat = FALSE
+  )
   
-  if (nrow(resumen_cie) > 0) {
-    for (i in 1:nrow(resumen_cie)) {
-      row <- resumen_cie[i, ]
-      fila <- mapa_filas[[row$CIE]]
-      
-      if (!is.null(fila)) {
-        range_write(ss = id_google_sheet, data = data.frame(fc(row$h)), range = paste0("VIOLENCIA!", letra_h, fila), col_names = FALSE, reformat = FALSE)
-        range_write(ss = id_google_sheet, data = data.frame(fc(row$m)), range = paste0("VIOLENCIA!", letra_m, fila), col_names = FALSE, reformat = FALSE)
-        range_write(ss = id_google_sheet, data = data.frame(fc(row$l)), range = paste0("VIOLENCIA!", letra_l, fila), col_names = FALSE, reformat = FALSE)
-      }
-    }
-  }
-  
-  # ZONA INFERIOR: Demografía Intercultural (Filas 13, 28 y 50)
-  range_write(ss = id_google_sheet, data = data.frame(hE), range = paste0("VIOLENCIA!", letra_h, "13"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(mE), range = paste0("VIOLENCIA!", letra_m, "13"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(lE), range = paste0("VIOLENCIA!", letra_l, "13"), col_names = FALSE, reformat = FALSE)
-  
-  range_write(ss = id_google_sheet, data = data.frame(hN), range = paste0("VIOLENCIA!", letra_h, "28"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(mN), range = paste0("VIOLENCIA!", letra_m, "28"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(lN), range = paste0("VIOLENCIA!", letra_l, "28"), col_names = FALSE, reformat = FALSE)
-  
-  range_write(ss = id_google_sheet, data = data.frame(hP), range = paste0("VIOLENCIA!", letra_h, "50"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(mP), range = paste0("VIOLENCIA!", letra_m, "50"), col_names = FALSE, reformat = FALSE)
-  range_write(ss = id_google_sheet, data = data.frame(lP), range = paste0("VIOLENCIA!", letra_l, "50"), col_names = FALSE, reformat = FALSE)
-  
-  cat("✅ Trabajador 12 finalizado. Matriz Espejo de violencia registrada en la nube.\n")
+  cat("✅ Trabajador 12 finalizado. Matriz Horizontal de Violencia registrada en la nube.\n")
 }
