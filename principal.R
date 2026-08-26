@@ -41,6 +41,7 @@ source("trabajadores/trabajador11_EstadoNutricional.R")
 source("trabajadores/trabajador12_Violencia.R")
 source("trabajadores/trabajador13_AdolescentesRiesgo.R")
 source("trabajadores/trabajador14_Top10Intercultural.R")
+source("trabajadores/trabajador15_SaludMental.R")
 
 # ====================================================================================
 # 3. FUNCIÓN MAESTRA (EL DIRECTOR DE ORQUESTA AUTÓNOMO)
@@ -208,6 +209,8 @@ ejecutar_sala_situacional_maestra <- function() {
       ejecutar_escudo(trabajador11_EstadoNutricional, "T11_EstadoNutricional", base_mensual_consolidada, id_google_sheet, mes_objetivo)
       ejecutar_escudo(trabajador12_Violencia, "T12_Violencia", base_mensual_consolidada, id_google_sheet, mes_objetivo)
       ejecutar_escudo(trabajador13_AdolescentesRiesgo, "T13_AdolescentesRiesgo", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador14_Top10Intercultural, "T14_Top10Intercultural", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador15_SaludMental, "T15_SaludMental", base_mensual_consolidada, id_google_sheet, mes_objetivo)
       
       
       # --- G. RADAR TRIMESTRAL PARA TRABAJADOR 14 (MODO SIGILO) ---
