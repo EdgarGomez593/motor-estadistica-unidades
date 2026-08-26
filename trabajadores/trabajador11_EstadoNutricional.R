@@ -63,6 +63,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
       
       # Reglas Clínicas Nutricionales (Se reintegra la Anemia para Niños)
       esPrimeraGeneral = str_detect(CRON, "PRIMER|^P$|^1$|^N$"),
+      esSubsecuenteGeneral = str_detect(CRON, "SUBSECUENTE|^S$|^2$"),
       esAguda = (CIE == "E441"),
       esCronica = (CIE %in% c("E43X", "E43")),
       esSobrepeso = (CIE %in% c("E660", "E669")),
@@ -102,6 +103,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   t59_cro <- sum(b_59$esCronica, na.rm=T)
   t59_agu <- sum(b_59$esAguda, na.rm=T)
   t59_sob <- sum(b_59$esSobrepeso, na.rm=T)
+  t59_sub <- sum(b_59$esSubsecuenteGeneral, na.rm=T)
   
   tem_pri <- sum(b_emb$esPrevEmbPrimera, na.rm=T)
   tem_obe <- sum(b_emb$esObesidadEmb, na.rm=T)
@@ -125,7 +127,10 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   range_write(ss = id_google_sheet, data = data.frame(fc(t59_cro)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "13"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(t59_agu)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "14"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(t59_sob)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "15"), col_names = FALSE, reformat = FALSE)
-  
+  # Inyección directa para los subsecuentes en la fila 18
+  range_write(ss = id_google_sheet, data = data.frame(fc(t59_sub)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "18"), col_names = FALSE, reformat = FALSE)
+
+                     
   # 🎯 Cuadro Embarazadas
   range_write(ss = id_google_sheet, data = data.frame(fc(tem_pri)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "23"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(tem_obe)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "25"), col_names = FALSE, reformat = FALSE)
