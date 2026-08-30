@@ -142,7 +142,7 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
   # ====================================================================
   # 6. CONSTRUCCIÓN DE LA SUPERMATRIZ MILIMÉTRICA (6 Filas x 132 Columnas)
   # ====================================================================
-  matriz_gigante <- matrix(0, nrow = 6, ncol = 132)
+  matriz_gigante <- matrix(0, nrow = 6, ncol = 138)
   
   if (nrow(base_clasificada) > 0) {
     for (r in 1:nrow(base_clasificada)) {
@@ -160,7 +160,7 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
       }
       
       if (fila$iP != -1) {
-        cP <- 75 + (fila$iP - 1) * 3 + gI + 1
+        cP <- 78 + (fila$iP - 1) * 3 + gI + 1
         matriz_gigante[fC, cP] <- matriz_gigante[fC, cP] + 1
       }
     }
