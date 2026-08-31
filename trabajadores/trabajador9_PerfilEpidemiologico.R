@@ -1,13 +1,14 @@
 # ====================================================================================
 # TRABAJADOR 9: MOTOR EPIDEMIOLÓGICO TOP 50 (PARADIGMA ELT)
-# Arquitectura: Zero-Ghost Data -> Cascada Étnica Inmaculada -> Inyección Vertical
+# Arquitectura: Zero-Ghost Data -> Respeto Autoidentidad -> Cascada Exclusiva Indígena
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
 trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
-  cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico Top 50 (Paradigma ELT)...\n")
+  cat("🦠 Trabajador 9 activado: Procesando Perfil Epidemiológico Top 50 Exclusivo Indígena...\n")
+  if(mes_objetivo > 12) return(invisible(NULL))
   
   mes_actual_num <- mes_objetivo
   
@@ -21,13 +22,20 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
   if (!"PCTE_NAC_ETN" %in% nombres_cols) tabla_consolidada$PCTE_NAC_ETN <- ""
   if (!"PCTE_PUEBLO" %in% nombres_cols) tabla_consolidada$PCTE_PUEBLO <- ""
   
+  col_tipo_diag <- "ATEMED_TIP_DIAG"
+  if (!("ATEMED_TIP_DIAG" %in% nombres_cols) && ("ATEMED_TIPO_DIAG" %in% nombres_cols)) {
+    col_tipo_diag <- "ATEMED_TIPO_DIAG"
+  } else if (!"ATEMED_TIP_DIAG" %in% nombres_cols && !"ATEMED_TIPO_DIAG" %in% nombres_cols) {
+    tabla_consolidada$ATEMED_TIP_DIAG <- ""
+  }
+  
   # ====================================================================
   # 2. LIMPIEZA Y FILTRADO ESTRICTO (El Escudo Clínico)
   # ====================================================================
   base_limpia <- tabla_consolidada %>%
     mutate(
       ESP = str_squish(str_remove_all(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE)), "[\r\n\"]")),
-      TIP = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_TIP_DIAG), "", ATEMED_TIP_DIAG)), "[\r\n\"]")),
+      TIP = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_tipo_diag)), "", !!sym(col_tipo_diag))), "[\r\n\"]")),
       CR  = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CRON_DIAG), "", ATEMED_CRON_DIAG)), "[\r\n\"]")),
       CON = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CON_DIAG), "", ATEMED_CON_DIAG)), "[\r\n\"]")),
       CIE = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10)), "[\r\n\"\\.]")),
@@ -53,30 +61,33 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
     filter((esMed | esOdo) & (esMujer | esHombre)) %>%
     
     # ====================================================================
-    # 3. LÓGICA DE CASCADA ÉTNICA INMACULADA (REGLAS 1 A 5)
+    # 3. LÓGICA DE CASCADA EXCLUSIVA INDÍGENA Y AUTOIDENTIDAD (REGLAS 1 A 5)
     # ====================================================================
     mutate(
       # Detectores Antropológicos
       es_pueblo_huancavilca = str_detect(PUE, "HUANCAVILCA"),
       tiene_pueblo = str_detect(PUE, "CHIBULEO|HUANCAVILCA|KA.*ARI|CA.*ARI|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|KICHWA AMAZ.*|KISAPINCHA|QUISAPINCHA|KITUKARA|QUITUCARA|NATABUELA|OTAVALO|PALTAS|PANZALEO|PASTOS|PURUH.*|PURUHÁ|PURUHA|SALASA.*|SARAGURO|TOMABELA|WARAMKA|GUARANCA"),
-      tiene_nac = str_detect(NAC, "ACHUAR|ANDOA|AWA|AWÁ|CHACHI|COF.*N|KOF.*N|EPERA|.*PERA|HUANCAVILCA|KICHWA|QUICHUA|SECOYA|SHIWIAR|SHUAR|TS.*CHILA|TSÁCHILA|WAORANI|HUAORANI|ZAPARA|ZÁPARA"),
       
-      # REGLA 1 y 2: Rescate Étnico e Independencia de Variables
-      ETNIA_RESC = case_when(tiene_pueblo | tiene_nac ~ "INDÍGENA", TRUE ~ ETN),
+      # 🚀 REGLA 1: Respeto Absoluto a la Autoidentificación (Cero Rescate Étnico)
+      ETNIA_RESC = ETN,
       NAC_RESC = NAC,
       
-      # REGLA 3: Etnia (1 a 10)
+      # 🚀 REGLA 4: Etnia (1 a 10 espacios mapeados de 1 a 10 en R)
       iE = case_when(
-        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
-        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
-        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, str_detect(ETNIA_RESC, 'MULAT.*') ~ 6,
-        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, str_detect(ETNIA_RESC, 'OTR.*') ~ 8,
+        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, 
+        str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
+        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, 
+        str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
+        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, 
+        str_detect(ETNIA_RESC, 'MULAT.*') ~ 6,
+        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, 
+        str_detect(ETNIA_RESC, 'OTR.*') ~ 8,
         str_detect(ETNIA_RESC, 'APLICA') ~ 10,
         str_detect(ETNIA_RESC, 'SABE.*|RESPONDE') | ETNIA_RESC == "" | is.na(ETNIA_RESC) ~ 9, 
         TRUE ~ 9
       ),
       
-      # REGLA 4: Cascada Nacionalidad (Solo Indígenas)
+      # 🚀 REGLA 2 y 4: Cascada Nacionalidad (Solo Indígenas, Amputación No Indígenas)
       iN = case_when(
         iE == 3 ~ case_when(
           str_detect(NAC_RESC, 'ACHUAR') ~ 1, str_detect(NAC_RESC, 'ANDOA') ~ 2, str_detect(NAC_RESC, 'AWA') ~ 3,
@@ -84,11 +95,12 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
           str_detect(NAC_RESC, 'HUANCAVILCA') ~ 7, str_detect(NAC_RESC, 'KICHWA|QUICHUA') ~ 8, str_detect(NAC_RESC, 'SECOYA') ~ 9,
           str_detect(NAC_RESC, 'SHIWIAR') ~ 10, str_detect(NAC_RESC, 'SHUAR') ~ 11, str_detect(NAC_RESC, 'TS.*CHILA') ~ 12,
           str_detect(NAC_RESC, 'WAORANI|HUAORANI') ~ 13, str_detect(NAC_RESC, 'ZAPARA') ~ 14, 
-          TRUE ~ 15 # Fusión de Vacíos y "No Sabe/Responde"
-        ), TRUE ~ -1 
+          TRUE ~ 15 # Vacíos y "No Sabe/Responde" exclusivos de indígenas
+        ), 
+        TRUE ~ -1 # Amputación total
       ),
       
-      # REGLA 4 y 5: Cascada Pueblo (Solo Indígenas e Independiente)
+      # 🚀 REGLA 2, 3 y 5: Cascada Pueblo (Solo Indígenas, Independiente)
       iP = case_when(
         iE == 3 ~ case_when(
           tiene_pueblo & !es_pueblo_huancavilca ~ case_when(
@@ -97,11 +109,13 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
             str_detect(PUE, 'KITUKARA|QUITUCARA') ~ 8, str_detect(PUE, 'NATABUELA') ~ 9, str_detect(PUE, 'OTAVALO') ~ 10,
             str_detect(PUE, 'PALTAS') ~ 11, str_detect(PUE, 'PANZALEO') ~ 12, str_detect(PUE, 'PASTOS') ~ 13,
             str_detect(PUE, 'PURUH.*') ~ 14, str_detect(PUE, 'SALASA.*') ~ 15, str_detect(PUE, 'SARAGURO') ~ 16,
-            str_detect(PUE, 'TOMABELA') ~ 17, str_detect(PUE, 'WARAMKA|GUARANCA') ~ 18, TRUE ~ 19
+            str_detect(PUE, 'TOMABELA') ~ 17, str_detect(PUE, 'WARAMKA|GUARANCA') ~ 18, 
+            TRUE ~ 19 # Vacíos exclusivos de indígenas
           ),
           es_pueblo_huancavilca ~ 2,
-          TRUE ~ 19 # Fusión de Vacíos y "No Sabe/Responde"
-        ), TRUE ~ -1 
+          TRUE ~ 19 # Vacíos exclusivos de indígenas
+        ), 
+        TRUE ~ -1 # Amputación total
       )
     )
   
@@ -120,7 +134,7 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
     
     if(nrow(ranking) == 0) return(NULL)
     
-    # Matrices pre-formateadas a 50 filas con NA para evitar Ghost Data (Regla 3 aplicada)
+    # Matrices pre-formateadas a 50 filas con NA para evitar Ghost Data (Regla 4 aplicada)
     df_cie <- data.frame(CIE = rep(NA_character_, 50), DES = rep(NA_character_, 50), H = rep(NA_real_, 50), M = rep(NA_real_, 50), stringsAsFactors = FALSE)
     df_etn <- as.data.frame(matrix(NA_real_, 50, 20)) # 10x2 = 20
     df_nac <- as.data.frame(matrix(NA_real_, 50, 30)) # 15x2 = 30
@@ -170,5 +184,5 @@ trabajador9_PerfilEpidemiologico <- function(tabla_consolidada, id_google_sheet,
   procesar_motor(base_med, "B", "F", "AB", "BJ")    # Coordenadas Medicina
   procesar_motor(base_odo, "DB", "DF", "EB", "FJ")  # Coordenadas Odontología
   
-  cat("✅ Trabajador 9 finalizado. Perfiles Epidemiológicos (ELT Inmaculado) actualizados en cajones mensuales.\n")
+  cat("✅ Trabajador 9 finalizado. Perfiles Epidemiológicos (ELT) con Cascada Exclusiva Indígena actualizados en cajones mensuales.\n")
 }
