@@ -1,6 +1,6 @@
 # ====================================================================================
-# TRABAJADOR 3: ETNIA, NACIONALIDAD Y PUEBLO (ESTÁNDAR PROVINCIAL)
-# Arquitectura: Embudo Constitucional -> Cascada 1:1 -> Índices Anti-Desbordamiento
+# TRABAJADOR 3: ETNIA, NACIONALIDAD Y PUEBLO (ESTÁNDAR OFICIAL MSP)
+# Arquitectura: Purga por Ticket -> Especialidad Oficial -> Catálogo 14 Códigos CIE-10
 # Coordenadas Originales: Etnia(24), Nacionalidad(38), Pueblo(58)
 # ====================================================================================
 library(dplyr)
@@ -8,7 +8,7 @@ library(stringr)
 library(googlesheets4)
 
 trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
-  cat("🌍 Trabajador 3 activado: Clasificando Etnia, Nacionalidad y Pueblo...\n")
+  cat("🌍 Trabajador 3 activado: Clasificando Etnia, Nacionalidad y Pueblo Oficial...\n")
   if(mes_objetivo > 12) return(invisible(NULL))
   
   # ====================================================================
@@ -20,16 +20,27 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
   letra_col <- letras_columnas[col_destino_num]
   letra_resumen <- "Q" 
   
-  especialidades_validas <- "MEDICINA FAMILIAR Y COMUNITARIA|MEDICINA RURAL|OBSTETRICIA|PSICOLOGÍA CLÍNICA|PSICOLOGIA CLINICA|ODONTOLOGÍA|ODONTOLOGIA|ENFERMERÍA|ENFERMERIA"
+  # ====================================================================
+  # 2. CATÁLOGOS OFICIALES SEGÚN FICHA METODOLÓGICA MSP
+  # ====================================================================
+  especialidades_validas <- "MEDICINA GENERAL INTEGRAL|MEDICINA FAMILIAR Y COMUNITARIA|MEDICINA RURAL|MEDICO RURAL|MÉDICO RURAL|GINECOLOGÍA Y OBSTETRICIA|GINECOLOGIA Y OBSTETRICIA|ATENCIÓN PRIMARIA EN SALUD|ATENCION PRIMARIA EN SALUD|OBSTETRICIA|OBSTETRICIA RURAL|MEDICINA GENERAL"
   
+  codigos_emb <- c("Z340", "Z348", "Z349", "Z350", "Z351", "Z352", "Z353", "Z354", "Z355", "Z356", "Z357", "Z358", "Z359", "Z321")
+
   nombres_cols <- names(tabla_consolidada)
+  if (!"ATEMED_ID" %in% nombres_cols) tabla_consolidada$ATEMED_ID <- paste0("FILA_", row_number())
   if (!"PCTE_AUTID_ETN" %in% nombres_cols) tabla_consolidada$PCTE_AUTID_ETN <- ""
   if (!"PCTE_NAC_ETN" %in% nombres_cols) tabla_consolidada$PCTE_NAC_ETN <- ""
   if (!"PCTE_PUEBLO" %in% nombres_cols) tabla_consolidada$PCTE_PUEBLO <- ""
+  if (!"PROF_ESP_ATE" %in% nombres_cols) tabla_consolidada$PROF_ESP_ATE <- ""
+  if (!"ATEMED_CRON_DIAG" %in% nombres_cols) tabla_consolidada$ATEMED_CRON_DIAG <- ""
   
   col_tipo_diag <- "ATEMED_TIP_DIAG"
   if (!("ATEMED_TIP_DIAG" %in% nombres_cols) && ("ATEMED_TIPO_DIAG" %in% nombres_cols)) {
     col_tipo_diag <- "ATEMED_TIPO_DIAG"
+  } else if (!"ATEMED_TIP_DIAG" %in% nombres_cols && !"ATEMED_TIPO_DIAG" %in% nombres_cols) {
+    tabla_consolidada$ATEMED_TIP_DIAG <- ""
+    col_tipo_diag <- "ATEMED_TIP_DIAG"
   }
   
   # ====================================================================
@@ -38,6 +49,7 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
   base_limpia <- tabla_consolidada %>%
     filter(!is.na(ATEMED_ID) & str_trim(ATEMED_ID) != "") %>%
     mutate(
+      TICKET = str_trim(ATEMED_ID),
       CR = str_remove_all(str_trim(toupper(ifelse(is.na(ATEMED_CRON_DIAG), "", ATEMED_CRON_DIAG))), "[\r\n\"]"),
       TP = str_remove_all(str_trim(toupper(ifelse(is.na(!!sym(col_tipo_diag)), "", !!sym(col_tipo_diag)))), "[\r\n\"]"),
       ES = str_remove_all(str_trim(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE))), "[\r\n\"]"),
@@ -48,13 +60,14 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
     )
   
   # ====================================================================
-  # PASO 2: FILTRADO ESTRICTO CLÍNICO
+  # PASO 2: FILTRADO ESTRICTO CLÍNICO Y PURGA POR TICKET
   # ====================================================================
   base_intercultural <- base_limpia %>%
-    filter(str_detect(TP, "PREV")) %>%
-    filter(CI == "Z321" | str_starts(CI, "Z34") | str_starts(CI, "Z35")) %>%
+    filter(CI %in% codigos_emb) %>%
     filter(str_detect(CR, "PRIMER|^P$|^1$|^N$")) %>%
-    filter(str_detect(ES, especialidades_validas))
+    filter(str_detect(ES, especialidades_validas)) %>%
+    # 🚀 LA PURGA POR TICKET: Unifica la métrica con Trabajadores 1 y 11
+    distinct(TICKET, .keep_all = TRUE)
   
   # ====================================================================
   # PASO 3: EMBUDO CONSTITUCIONAL Y CASCADA MILIMÉTRICA
@@ -91,9 +104,9 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
           str_detect(NAC_RESC, 'HUANCAVILCA') ~ 6, str_detect(NAC_RESC, 'KICHWA') ~ 7, str_detect(NAC_RESC, 'SECOYA') ~ 8,
           str_detect(NAC_RESC, 'SHIWIAR') ~ 9, str_detect(NAC_RESC, 'SHUAR') ~ 10, str_detect(NAC_RESC, 'TS.*CHILA') ~ 11,
           str_detect(NAC_RESC, 'WAORANI|HUAORANI') ~ 12, str_detect(NAC_RESC, 'ZAPARA') ~ 13,
-          TRUE ~ 14 # Vacíos, "Aplica" y "Sabe/Responde" se fusionan aquí
+          TRUE ~ 14 
         ),
-        TRUE ~ -1 # Mestizos amputados
+        TRUE ~ -1 
       ),
       
       # 🚀 NIVEL 3: PUEBLO (Máximo 18 - 19 espacios)
@@ -106,21 +119,21 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
             str_detect(PU, 'PALTAS') ~ 10, str_detect(PU, 'PANZALEO') ~ 11, str_detect(PU, 'PASTOS') ~ 12,
             str_detect(PU, 'PURUH.*') ~ 13, str_detect(PU, 'SALASA.*') ~ 14, str_detect(PU, 'SARAGURO') ~ 15,
             str_detect(PU, 'TOMABELA') ~ 16, str_detect(PU, 'WARAMKA|GUARANCA') ~ 17,
-            TRUE ~ 18 # Vacíos, "Aplica" y "Sabe/Responde" se fusionan aquí
+            TRUE ~ 18 
           ),
           iN == 6 & es_pueblo_huancavilca ~ 1,
-          TRUE ~ 18 # Kichwas sin pueblo o vacíos se fusionan aquí
+          TRUE ~ 18 
         ),
-        TRUE ~ -1 # Mestizos amputados
+        TRUE ~ -1 
       )
     )
   
   # ====================================================================
   # PASO 4: CONTEO ESTRICTO DE MATRICES
   # ====================================================================
-  cE <- numeric(10) # 10 espacios (0 al 9)
-  cN <- numeric(15) # 15 espacios (0 al 14)
-  cP <- numeric(19) # 19 espacios (0 al 18)
+  cE <- numeric(10) 
+  cN <- numeric(15) 
+  cP <- numeric(19) 
   
   for(i in 0:9)  { cE[i+1] <- sum(base_clasificada$iE == i, na.rm = TRUE) }
   for(i in 0:14) { cN[i+1] <- sum(base_clasificada$iN == i, na.rm = TRUE) }
