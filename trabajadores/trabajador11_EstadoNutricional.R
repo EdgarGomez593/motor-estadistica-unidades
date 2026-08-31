@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 11: MOTOR DE ESTADO NUTRICIONAL E INTERCULTURALIDAD EXPANDIDA
-# Arquitectura: Motor Híbrido -> Lógica Universal CIE-10 Embarazo
+# Arquitectura: Híbrido -> Pediatría (Fila a Fila) + Obstetricia (Ticket + Ficha MSP)
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -16,6 +16,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   nombres_cols <- names(tabla_consolidada)
   nombres_upper <- toupper(nombres_cols)
   
+  # Radares de Cabecera
   col_edad_meses <- if(any(str_detect(nombres_upper, "PCTE_ANIOS_EN_MESES"))) nombres_cols[str_detect(nombres_upper, "PCTE_ANIOS_EN_MESES")][1] else { tabla_consolidada$PCTE_ANIOS_EN_MESES <- NA; "PCTE_ANIOS_EN_MESES" }
   col_imc <- if(any(str_detect(nombres_upper, "PCTE_ULT_IMC$"))) nombres_cols[str_detect(nombres_upper, "PCTE_ULT_IMC$")][1] else { tabla_consolidada$PCTE_ULT_IMC <- NA; "PCTE_ULT_IMC" }
   col_esp <- if(any(str_detect(nombres_upper, "PROF_ESP_ATE"))) nombres_cols[str_detect(nombres_upper, "PROF_ESP_ATE")][1] else { tabla_consolidada$PROF_ESP_ATE <- ""; "PROF_ESP_ATE" }
@@ -24,6 +25,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   col_nac <- if("PCTE_NAC_ETN" %in% nombres_upper) nombres_cols[nombres_upper == "PCTE_NAC_ETN"][1] else if(any(str_detect(nombres_upper, "NAC_ETN|NACIONALIDAD_ETN"))) nombres_cols[str_detect(nombres_upper, "NAC_ETN|NACIONALIDAD_ETN")][1] else { tabla_consolidada$PCTE_NAC_ETN <- ""; "PCTE_NAC_ETN" }
   col_pue <- if(any(str_detect(nombres_upper, "PUEBLO"))) nombres_cols[str_detect(nombres_upper, "PUEBLO")][1] else { tabla_consolidada$PCTE_PUEBLO <- ""; "PCTE_PUEBLO" }
   
+  # Base Maestra y Limpieza
   base_maestra <- tabla_consolidada %>%
     mutate(
       TICKET = str_trim(ifelse(is.na(ATEMED_ID) | ATEMED_ID == "", paste0("FILA_VACIA_", row_number()), ATEMED_ID)),
@@ -38,6 +40,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
       PUE_RAW = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_pue)), "", !!sym(col_pue))), "[\r\n\"]"))
     ) %>%
     mutate(
+      # Cascada Étnica
       es_pueblo_huancavilca = str_detect(PUE_RAW, "HUANCAVILCA"),
       tiene_pueblo = str_detect(PUE_RAW, "CHIBULEO|HUANCAVILCA|KA.*ARI|CA.*ARI|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|KICHWA AMAZ.*|KISAPINCHA|QUISAPINCHA|KITUKARA|QUITUCARA|NATABUELA|OTAVALO|PALTAS|PANZALEO|PASTOS|PURUH.*|PURUHÁ|PURUHA|SALASA.*|SARAGURO|TOMABELA|WARAMKA|GUARANCA"),
       tiene_nac = str_detect(NAC_RAW, "ACHUAR|ANDOA|AWA|AWÁ|CHACHI|COF.*N|KOF.*N|EPERA|.*PERA|HUANCAVILCA|KICHWA|QUICHUA|SECOYA|SHIWIAR|SHUAR|TS.*CHILA|TSÁCHILA|WAORANI|HUAORANI|ZAPARA|ZÁPARA"),
@@ -81,6 +84,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
         ), TRUE ~ -1 
       ),
       
+      # Clínicos Generales
       esPrimeraGeneral = str_detect(CRON, "PRIMER|^P$|^1$|^N$"),
       esSubsecuenteGeneral = str_detect(CRON, "SUBSECUENTE|^S$|^2$"),
       esAguda = (CIE == "E441"),
@@ -89,15 +93,18 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
       esAnemiaNino = (CIE %in% c("D46X", "D46"))
     )
   
+  # 👶 PEDIATRÍA (Fila a Fila, se mantiene intacto)
   b_24 <- base_maestra %>% filter(EDAD_MESES >= 0 & EDAD_MESES < 24)
   b_59 <- base_maestra %>% filter(EDAD_MESES >= 0 & EDAD_MESES < 60)
   
-  # 🤰 OBSTETRICIA (Lógica Universal CIE-10 por Ticket)
+  # 🤰 OBSTETRICIA (Implante de ADN de Ficha Metodológica)
   b_emb <- base_maestra %>% 
     filter(
-      str_detect(CIE, "^Z321|^Z34|^Z35"),
+      CIE %in% c("Z340", "Z348", "Z349", "Z350", "Z351", "Z352", "Z353", "Z354", "Z355", "Z356", "Z357", "Z358", "Z359", "Z321"),
+      str_detect(ESP, "MEDICINA GENERAL INTEGRAL|MEDICINA FAMILIAR Y COMUNITARIA|MEDICINA RURAL|MEDICO RURAL|MÉDICO RURAL|GINECOLOGÍA Y OBSTETRICIA|GINECOLOGIA Y OBSTETRICIA|ATENCIÓN PRIMARIA EN SALUD|ATENCION PRIMARIA EN SALUD|OBSTETRICIA|OBSTETRICIA RURAL|MEDICINA GENERAL"),
       esPrimeraGeneral == TRUE
     ) %>%
+    # 🚀 LA PURGA POR TICKET: Unifica la métrica con el T2
     distinct(TICKET, .keep_all = TRUE) %>%
     mutate(
       esBajoPesoEmb = (IMC > 0 & IMC < 18),
@@ -105,6 +112,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
       esObesidadEmb = (IMC >= 30)
     )
   
+  # Sumatorias de Poblaciones
   t24_pri <- sum(b_24$esPrimeraGeneral, na.rm=T)
   t24_cro <- sum(b_24$esCronica, na.rm=T)
   t24_agu <- sum(b_24$esAguda, na.rm=T)
@@ -124,6 +132,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   
   fc <- function(x) { if (x > 0) return(x) else return(NA_real_) }
   
+  # Inyección Superior
   range_write(ss = id_google_sheet, data = data.frame(fc(t24_pri)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "3"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(t24_cro)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "4"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(t24_agu)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "5"), col_names = FALSE, reformat = FALSE)
@@ -141,6 +150,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   range_write(ss = id_google_sheet, data = data.frame(fc(tem_baj)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "26"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(tem_sob)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "27"), col_names = FALSE, reformat = FALSE)
   
+  # Construcción Matricial (50 Columnas, GPS Intacto)
   salto_filas <- (mes_objetivo - 1) * 8
   f_inicio_24 <- 35 + salto_filas
   f_inicio_59 <- 132 + salto_filas
