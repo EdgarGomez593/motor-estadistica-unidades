@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 14: MOTOR TOP 10 INTERCULTURAL POR CICLO DE VIDA Y VULNERABILIDAD
-# Arquitectura: Zero-Ghost Data -> Salto Trimestral Algorítmico -> Cascada Inmaculada
+# Arquitectura: Zero-Ghost Data -> Cascada Exclusiva Indígena -> Salto Trimestral
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -8,7 +8,7 @@ library(googlesheets4)
 
 trabajador14_Top10Intercultural <- function(tabla_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = NULL) {
   
-  cat("🏆 Trabajador 14 activado: Iniciando supercomputadora de Top 10 Intercultural...\n")
+  cat("🏆 Trabajador 14 activado: Iniciando supercomputadora de Top 10 Intercultural (Sub-Universo)...\n")
   
   # ====================================================================
   # 1. ARQUITECTURA DE SALTO ALGORÍTMICO Y TRIMESTRES (INTACTA)
@@ -83,26 +83,30 @@ trabajador14_Top10Intercultural <- function(tabla_consolidada, id_google_sheet, 
       esHombre = !esLGBTI & str_detect(SEXO, "HOMBRE|^M$"),
       esMujer = !esLGBTI & str_detect(SEXO, "MUJER|^F$"),
       
-      # 🚀 RADARES Y RESCATE ÉTNICO (Regla 1 y 2)
+      # 🚀 RADARES ANTROPOLÓGICOS
       es_pueblo_huancavilca = str_detect(PUEB_RAW, "HUANCAVILCA"),
       tiene_pueblo = str_detect(PUEB_RAW, "CHIBULEO|HUANCAVILCA|KA.*ARI|CA.*ARI|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|KICHWA AMAZ.*|KISAPINCHA|QUISAPINCHA|KITUKARA|QUITUCARA|NATABUELA|OTAVALO|PALTAS|PANZALEO|PASTOS|PURUH.*|PURUHÁ|PURUHA|SALASA.*|SARAGURO|TOMABELA|WARAMKA|GUARANCA"),
-      tiene_nac = str_detect(NAC_RAW, "ACHUAR|ANDOA|AWA|AWÁ|CHACHI|COF.*N|KOF.*N|EPERA|.*PERA|HUANCAVILCA|KICHWA|QUICHUA|SECOYA|SHIWIAR|SHUAR|TS.*CHILA|TSÁCHILA|WAORANI|HUAORANI|ZAPARA|ZÁPARA"),
       
-      ETNIA_RESC = case_when(tiene_pueblo | tiene_nac ~ "INDÍGENA", TRUE ~ ETNIA_RAW),
-      NAC_RESC = NAC_RAW, # Mantiene independencia, no infla el Kichwa
+      # 🚀 REGLA 1: RESPETO ABSOLUTO A LA AUTOIDENTIFICACIÓN (Cero Rescate Étnico)
+      ETNIA_RESC = ETNIA_RAW,
+      NAC_RESC = NAC_RAW, 
       
-      # 🚀 CASCADA NIVEL 1: Etnia (1 a 10)
+      # 🚀 REGLA 4: CASCADA NIVEL 1 - Etnia (1 a 10)
       iE = case_when(
-        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
-        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
-        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, str_detect(ETNIA_RESC, 'MULAT.*') ~ 6,
-        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, str_detect(ETNIA_RESC, 'OTR.*') ~ 8,
+        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, 
+        str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
+        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, 
+        str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
+        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, 
+        str_detect(ETNIA_RESC, 'MULAT.*') ~ 6,
+        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, 
+        str_detect(ETNIA_RESC, 'OTR.*') ~ 8,
         str_detect(ETNIA_RESC, 'APLICA') ~ 10,
         str_detect(ETNIA_RESC, 'SABE.*|RESPONDE') | ETNIA_RESC == "" | is.na(ETNIA_RESC) ~ 9, 
         TRUE ~ 9
       ),
       
-      # 🚀 CASCADA NIVEL 2: Nacionalidad (1 a 15) - Solo entran Indígenas
+      # 🚀 REGLA 2 y 4: CASCADA NIVEL 2 - Nacionalidad (1 a 15) Exclusiva Indígena
       iN = case_when(
         iE == 3 ~ case_when(
           str_detect(NAC_RESC, 'ACHUAR') ~ 1, str_detect(NAC_RESC, 'ANDOA') ~ 2, str_detect(NAC_RESC, 'AWA') ~ 3,
@@ -110,11 +114,12 @@ trabajador14_Top10Intercultural <- function(tabla_consolidada, id_google_sheet, 
           str_detect(NAC_RESC, 'HUANCAVILCA') ~ 7, str_detect(NAC_RESC, 'KICHWA|QUICHUA') ~ 8, str_detect(NAC_RESC, 'SECOYA') ~ 9,
           str_detect(NAC_RESC, 'SHIWIAR') ~ 10, str_detect(NAC_RESC, 'SHUAR') ~ 11, str_detect(NAC_RESC, 'TS.*CHILA') ~ 12,
           str_detect(NAC_RESC, 'WAORANI|HUAORANI') ~ 13, str_detect(NAC_RESC, 'ZAPARA') ~ 14, 
-          TRUE ~ 15 # Vacíos, "Aplica" y "No Sabe" caen aquí
-        ), TRUE ~ -1 # Amputación de otras etnias
+          TRUE ~ 15 # Vacíos y "No Sabe/Responde" EXCLUSIVOS
+        ), 
+        TRUE ~ -1 # Amputación matemática de no indígenas
       ),
       
-      # 🚀 CASCADA NIVEL 3: Pueblo (1 a 19) - Independiente de Nacionalidad
+      # 🚀 REGLA 2, 3 y 5: CASCADA NIVEL 3 - Pueblo (1 a 19) Independiente
       iP = case_when(
         iE == 3 ~ case_when(
           tiene_pueblo & !es_pueblo_huancavilca ~ case_when(
@@ -123,11 +128,13 @@ trabajador14_Top10Intercultural <- function(tabla_consolidada, id_google_sheet, 
             str_detect(PUEB_RAW, 'KITUKARA|QUITUCARA') ~ 8, str_detect(PUEB_RAW, 'NATABUELA') ~ 9, str_detect(PUEB_RAW, 'OTAVALO') ~ 10,
             str_detect(PUEB_RAW, 'PALTAS') ~ 11, str_detect(PUEB_RAW, 'PANZALEO') ~ 12, str_detect(PUEB_RAW, 'PASTOS') ~ 13,
             str_detect(PUEB_RAW, 'PURUH.*') ~ 14, str_detect(PUEB_RAW, 'SALASA.*') ~ 15, str_detect(PUEB_RAW, 'SARAGURO') ~ 16,
-            str_detect(PUEB_RAW, 'TOMABELA') ~ 17, str_detect(PUEB_RAW, 'WARAMKA|GUARANCA') ~ 18, TRUE ~ 19
+            str_detect(PUEB_RAW, 'TOMABELA') ~ 17, str_detect(PUEB_RAW, 'WARAMKA|GUARANCA') ~ 18, 
+            TRUE ~ 19
           ),
           es_pueblo_huancavilca ~ 2,
-          TRUE ~ 19 # Vacíos, "Aplica" y "No Sabe" caen aquí
-        ), TRUE ~ -1 # Amputación de otras etnias
+          TRUE ~ 19 # Vacíos y "No Sabe/Responde" EXCLUSIVOS
+        ), 
+        TRUE ~ -1 # Amputación matemática de no indígenas
       )
     )
   
@@ -150,7 +157,7 @@ trabajador14_Top10Intercultural <- function(tabla_consolidada, id_google_sheet, 
       c_desc <- ranking$DESC[r]
       sub <- df_subgrupo %>% filter(CIE == c_cie)
       
-      # 🚀 REGLA 3: Dimensiones Matemáticas Exactas
+      # 🚀 Dimensiones Matemáticas Exactas (GPS)
       vE <- numeric(20); vN <- numeric(30); vP <- numeric(38)
       
       idx <- 1; for(i in 1:10) { vE[idx] <- sum(sub$iE == i & sub$esHombre, na.rm=T); vE[idx+1] <- sum(sub$iE == i & sub$esMujer, na.rm=T); idx <- idx + 2 }
@@ -158,9 +165,10 @@ trabajador14_Top10Intercultural <- function(tabla_consolidada, id_google_sheet, 
       idx <- 1; for(i in 1:19) { vP[idx] <- sum(sub$iP == i & sub$esHombre, na.rm=T); vP[idx+1] <- sum(sub$iP == i & sub$esMujer, na.rm=T); idx <- idx + 2 }
       
       vE[vE == 0] <- NA_real_; vN[vN == 0] <- NA_real_; vP[vP == 0] <- NA_real_
+      
       tE <- sum(vE, na.rm=T); if(tE == 0) tE <- NA_real_
-      tN <- sum(vN, na.rm=T); if(tN == 0) tN <- NA_real_
-      tP <- sum(vP, na.rm=T); if(tP == 0) tP <- NA_real_
+      tN <- sum(vN, na.rm=T); if(tN == 0) tN <- NA_real_  # Solo sumará a los indígenas porque el resto es -1
+      tP <- sum(vP, na.rm=T); if(tP == 0) tP <- NA_real_  # Solo sumará a los indígenas porque el resto es -1
       
       # 🚀 GPS DE INYECCIÓN INTOCABLE (Totales en 24, 58 y 100)
       matriz_final[r, 1] <- as.numeric(r)
@@ -172,11 +180,11 @@ trabajador14_Top10Intercultural <- function(tabla_consolidada, id_google_sheet, 
       matriz_final[r, 25] <- NA_real_              # %
       
       matriz_final[r, 26:55] <- vN                 # Nac (15 pares)
-      matriz_final[r, 58] <- tN                    # Total Nac (GPS Mantenido)
+      matriz_final[r, 58] <- tN                    # Total Nac (Sub-universo)
       matriz_final[r, 59] <- NA_real_              # %
       
       matriz_final[r, 60:97] <- vP                 # Pueblo (19 pares)
-      matriz_final[r, 100] <- tP                   # Total Pueblo (GPS Mantenido)
+      matriz_final[r, 100] <- tP                   # Total Pueblo (Sub-universo)
       matriz_final[r, 101] <- NA_real_             # %
     }
     return(matriz_final)
@@ -202,7 +210,7 @@ trabajador14_Top10Intercultural <- function(tabla_consolidada, id_google_sheet, 
   range_write(ss = id_google_sheet, data = as.data.frame(m_may), range = paste0("TOP10_INTERCULTURAL!", letra_inicio, "56"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = as.data.frame(m_dis), range = paste0("TOP10_INTERCULTURAL!", letra_inicio, "69"), col_names = FALSE, reformat = FALSE)
   
-  cat(paste0("✅ Trabajador 14 Finalizado. Matriz intercultural inyectada desde la columna ", letra_inicio, ".\n"))
+  cat(paste0("✅ Trabajador 14 Finalizado. Matriz intercultural inyectada desde la columna ", letra_inicio, " con amputación estricta.\n"))
 
   # ==================================================================================
   # 🤖 SUB-RUTINA AUTÓNOMA: DETECCIÓN Y DISPARO TRIMESTRAL
