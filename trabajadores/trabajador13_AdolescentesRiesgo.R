@@ -1,13 +1,14 @@
 # ====================================================================================
 # TRABAJADOR 13: ADOLESCENTES EN RIESGO (10 a 19 años)
-# Arquitectura: Doble Pista de Aterrizaje -> Matriz Clínica (Arriba) + Intercultural (Abajo)
+# Arquitectura: Doble Pista -> Matriz Clínica + Cascada Étnica Inmaculada (RStudio)
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
 trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
-  cat("🎯 Trabajador 13 activado: Analizando Doble Matriz de Adolescentes en Riesgo...\n")
+  cat("🎯 Trabajador 13 activado: Analizando Doble Matriz de Adolescentes en Riesgo (Estándar Inmaculado)...\n")
+  if(mes_objetivo > 12) return(invisible(NULL))
   
   # ====================================================================
   # 1. MAPA DE MESES Y COLUMNAS DESTINO (Matriz Superior)
@@ -33,7 +34,7 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   col_pue <- if(any(str_detect(nombres_cols, "PCTE_PUEBLO"))) "PCTE_PUEBLO" else if(any(str_detect(nombres_cols, "PUEBLO"))) nombres_cols[str_detect(nombres_cols, "PUEBLO")][1] else { tabla_consolidada$PCTE_PUEBLO <- ""; "PCTE_PUEBLO" }
   
   # ====================================================================
-  # 3. LIMPIEZA, FILTRADO Y CLASIFICADORES
+  # 3. LIMPIEZA, FILTRADO Y CASCADA ÉTNICA INMACULADA
   # ====================================================================
   base_limpia <- tabla_consolidada %>%
     mutate(
@@ -44,9 +45,10 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
       DISC = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_DISC), "", PCTE_DISC)), "[\r\n\"]")),
       TIP_DISC = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_TIP_DISC), "", PCTE_TIP_DISC)), "[\r\n\"]")),
       SEXO = str_squish(str_remove_all(toupper(ifelse(is.na(PCTE_SEXO), "", PCTE_SEXO)), "[\r\n\"]")),
-      ETNIA = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_etn)), "NO APLICA", !!sym(col_etn))), "[\r\n\"]")),
-      NAC = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_nac)), "NO APLICA", !!sym(col_nac))), "[\r\n\"]")),
-      PUEB = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_pue)), "NO APLICA", !!sym(col_pue))), "[\r\n\"]"))
+      
+      ETN_RAW = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_etn)), "", !!sym(col_etn))), "[\r\n\"]")),
+      NAC_RAW = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_nac)), "", !!sym(col_nac))), "[\r\n\"]")),
+      PUE_RAW = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_pue)), "", !!sym(col_pue))), "[\r\n\"]"))
     ) %>%
     # FILTRO MAESTRO: 10 a 19 años, PRIMERA VEZ
     filter(EDAD >= 10 & EDAD <= 19) %>%
@@ -55,10 +57,59 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
       esMujer = str_detect(SEXO, "MUJER|FEMENINO|^F$"),
       esHombre = !str_detect(SEXO, "MUJER|FEMENINO|^F$"),
       
-      # ⚠️ RADARES DE SELVA ACTIVADOS (Blindaje ortográfico total .*)
-      iE = case_when(str_detect(ETNIA, 'AFRO.*') ~ 1, str_detect(ETNIA, 'BLANC.*') ~ 2, str_detect(ETNIA, 'IND.*GENA') ~ 3, str_detect(ETNIA, 'MESTIZ.*') ~ 4, str_detect(ETNIA, 'MONTUB.*|MONTUV.*') ~ 5, str_detect(ETNIA, 'MULAT.*') ~ 6, str_detect(ETNIA, 'NEGR.*') ~ 7, str_detect(ETNIA, 'OTR.*') ~ 8, str_detect(ETNIA, 'SABE.*|RESPONDE') ~ 9, str_detect(ETNIA, 'APLICA|^$') ~ 10, TRUE ~ 10),
-      iN = case_when(str_detect(NAC, 'ACHUAR') ~ 1, str_detect(NAC, 'ANDOA') ~ 2, str_detect(NAC, 'AWA|AWÁ') ~ 3, str_detect(NAC, 'CHACHI') ~ 4, str_detect(NAC, 'COF.*N|KOF.*N') ~ 5, str_detect(NAC, 'EPERA|.*PERA') ~ 6, str_detect(NAC, 'HUANCAVILCA') ~ 7, str_detect(NAC, 'KICH.*|QUICH.*') | str_detect(PUEB, 'CHIBULEO|SALASA|TOMABELA|KISAPINCHA|QUISAPINCHA|NATABUELA|OTAVALO|PURUH|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|PANZALEO|PASTOS|WARAMKA|GUARANCA|KA.*ARI|CA.*ARI') ~ 8, str_detect(NAC, 'SECOYA') ~ 9, str_detect(NAC, 'SHIWIAR') ~ 10, str_detect(NAC, 'SHUAR') ~ 11, str_detect(NAC, 'TS.*CHILA') ~ 12, str_detect(NAC, 'WAORANI|HUAORANI') ~ 13, str_detect(NAC, 'Z.*PARA') ~ 14, str_detect(NAC, 'SABE.*|RESPONDE') ~ 15, str_detect(NAC, 'APLICA|^$') ~ 16, TRUE ~ 16),
-      iP = case_when(str_detect(PUEB, 'CHIBULEO') ~ 1, str_detect(PUEB, 'HUANCAVILCA') ~ 2, str_detect(PUEB, 'KA.*ARI|CA.*ARI') ~ 3, str_detect(PUEB, 'KARANKI|CARANQUI') ~ 4, str_detect(PUEB, 'KAYAMBI|CAYAMBI') ~ 5, str_detect(PUEB, 'KICHWA AMAZ.*') ~ 6, str_detect(PUEB, 'KISAPINCHA|QUISAPINCHA') ~ 7, str_detect(PUEB, 'KITUKARA|QUITUCARA') ~ 8, str_detect(PUEB, 'NATABUELA') ~ 9, str_detect(PUEB, 'OTAVALO') ~ 10, str_detect(PUEB, 'PALTAS') ~ 11, str_detect(PUEB, 'PANZALEO') ~ 12, str_detect(PUEB, 'PASTOS') ~ 13, str_detect(PUEB, 'PURUH.*') ~ 14, str_detect(PUEB, 'SALASA.*') ~ 15, str_detect(PUEB, 'SARAGURO') ~ 16, str_detect(PUEB, 'TOMABELA') ~ 17, str_detect(PUEB, 'WARAMKA|GUARANCA') ~ 18, str_detect(PUEB, 'SABE.*|RESPONDE') ~ 19, str_detect(PUEB, 'APLICA|^$') ~ 20, TRUE ~ 20)
+      # 🚀 1. RESCATE ÉTNICO (Falsos Mestizos)
+      es_pueblo_huancavilca = str_detect(PUE_RAW, "HUANCAVILCA"),
+      tiene_pueblo = str_detect(PUE_RAW, "CHIBULEO|HUANCAVILCA|KA.*ARI|CA.*ARI|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|KICHWA AMAZ.*|KISAPINCHA|QUISAPINCHA|KITUKARA|QUITUCARA|NATABUELA|OTAVALO|PALTAS|PANZALEO|PASTOS|PURUH.*|PURUHÁ|PURUHA|SALASA.*|SARAGURO|TOMABELA|WARAMKA|GUARANCA"),
+      tiene_nac = str_detect(NAC_RAW, "ACHUAR|ANDOA|AWA|AWÁ|CHACHI|COF.*N|KOF.*N|EPERA|.*PERA|HUANCAVILCA|KICHWA|QUICHUA|SECOYA|SHIWIAR|SHUAR|TS.*CHILA|TSÁCHILA|WAORANI|HUAORANI|ZAPARA|ZÁPARA"),
+      
+      ETNIA_RESC = case_when(tiene_pueblo | tiene_nac ~ "INDÍGENA", TRUE ~ ETN_RAW),
+      NAC_RESC = NAC_RAW,
+      
+      # 🚀 2. NIVEL 1: ETNIA (10 espacios: Índices 1 al 10 en R / 0 al 9 en lógica)
+      iE = case_when(
+        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, 
+        str_detect(ETNIA_RESC, 'BLANC.*') ~ 2, 
+        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, 
+        str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4, 
+        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, 
+        str_detect(ETNIA_RESC, 'MULAT.*') ~ 6, 
+        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, 
+        str_detect(ETNIA_RESC, 'OTR.*') ~ 8, 
+        str_detect(ETNIA_RESC, 'APLICA') ~ 10,
+        str_detect(ETNIA_RESC, 'SABE.*|RESPONDE') | ETNIA_RESC == "" | is.na(ETNIA_RESC) ~ 9, 
+        TRUE ~ 9
+      ),
+      
+      # 🚀 3. NIVEL 2: NACIONALIDAD (15 espacios exactos) - Amputación activa (-1 si no es indígena iE == 3)
+      iN = case_when(
+        iE == 3 ~ case_when(
+          str_detect(NAC_RESC, 'ACHUAR') ~ 1, str_detect(NAC_RESC, 'ANDOA') ~ 2, str_detect(NAC_RESC, 'AWA') ~ 3,
+          str_detect(NAC_RESC, 'CHACHI') ~ 4, str_detect(NAC_RESC, 'COF.*N|KOF.*N') ~ 5, str_detect(NAC_RESC, 'EPERA|.*PERA') ~ 6,
+          str_detect(NAC_RESC, 'HUANCAVILCA') ~ 7, str_detect(NAC_RESC, 'KICHWA|QUICHUA') ~ 8, str_detect(NAC_RESC, 'SECOYA') ~ 9,
+          str_detect(NAC_RESC, 'SHIWIAR') ~ 10, str_detect(NAC_RESC, 'SHUAR') ~ 11, str_detect(NAC_RESC, 'TS.*CHILA') ~ 12,
+          str_detect(NAC_RESC, 'WAORANI|HUAORANI') ~ 13, str_detect(NAC_RESC, 'ZAPARA|ZÁPARA') ~ 14, 
+          TRUE ~ 15
+        ), 
+        TRUE ~ -1
+      ),
+      
+      # 🚀 4. NIVEL 3: PUEBLO (19 espacios exactos) - Amputación activa (-1 si no es indígena iE == 3)
+      iP = case_when(
+        iE == 3 ~ case_when(
+          tiene_pueblo & !es_pueblo_huancavilca ~ case_when(
+            str_detect(PUE_RAW, 'CHIBULEO') ~ 1, str_detect(PUE_RAW, 'KA.*ARI|CA.*ARI') ~ 3, str_detect(PUE_RAW, 'KARANKI|CARANQUI') ~ 4,
+            str_detect(PUE_RAW, 'KAYAMBI|CAYAMBI') ~ 5, str_detect(PUE_RAW, 'KICHWA AMAZ.*') ~ 6, str_detect(PUE_RAW, 'KISAPINCHA|QUISAPINCHA') ~ 7,
+            str_detect(PUE_RAW, 'KITUKARA|QUITUCARA') ~ 8, str_detect(PUE_RAW, 'NATABUELA') ~ 9, str_detect(PUE_RAW, 'OTAVALO') ~ 10,
+            str_detect(PUE_RAW, 'PALTAS') ~ 11, str_detect(PUE_RAW, 'PANZALEO') ~ 12, str_detect(PUE_RAW, 'PASTOS') ~ 13,
+            str_detect(PUE_RAW, 'PURUH.*') ~ 14, str_detect(PUE_RAW, 'SALASA.*') ~ 15, str_detect(PUE_RAW, 'SARAGURO') ~ 16,
+            str_detect(PUE_RAW, 'TOMABELA') ~ 17, str_detect(PUE_RAW, 'WARAMKA|GUARANCA') ~ 18, 
+            TRUE ~ 19
+          ),
+          es_pueblo_huancavilca ~ 2,
+          TRUE ~ 19
+        ), 
+        TRUE ~ -1
+      )
     )
   
   # ====================================================================
@@ -82,21 +133,21 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   }
   
   # ====================================================================
-  # FUNCIÓN MOTOR: MATRIZ INFERIOR (Pista de Aterrizaje Intercultural)
-  # EVASIÓN DE FÓRMULAS: Crea 3 bloques exactos (E=10, N=16, P=20)
+  # FUNCIÓN MOTOR: MATRIZ INFERIOR (Pista de Aterrizaje Intercultural Inmaculada)
+  # Dimensiones exactas: E=10, N=15, P=19
   # ====================================================================
   generar_bloques_inter <- function(lista_dfs) {
     num_rows <- length(lista_dfs)
     mE <- matrix(NA_real_, nrow=num_rows, ncol=10)
-    mN <- matrix(NA_real_, nrow=num_rows, ncol=16)
-    mP <- matrix(NA_real_, nrow=num_rows, ncol=20)
+    mN <- matrix(NA_real_, nrow=num_rows, ncol=15)
+    mP <- matrix(NA_real_, nrow=num_rows, ncol=19)
     
     for(r in 1:num_rows) {
       sub_df <- lista_dfs[[r]]
       if(nrow(sub_df) > 0) {
         for(i in 1:10) { c <- sum(sub_df$iE == i, na.rm=T); if(c > 0) mE[r, i] <- c }
-        for(i in 1:16) { c <- sum(sub_df$iN == i, na.rm=T); if(c > 0) mN[r, i] <- c }
-        for(i in 1:20) { c <- sum(sub_df$iP == i, na.rm=T); if(c > 0) mP[r, i] <- c }
+        for(i in 1:15) { c <- sum(sub_df$iN == i & sub_df$iE == 3, na.rm=T); if(c > 0) mN[r, i] <- c }
+        for(i in 1:19) { c <- sum(sub_df$iP == i & sub_df$iE == 3, na.rm=T); if(c > 0) mP[r, i] <- c }
       }
     }
     
@@ -121,7 +172,6 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   procesar_top_hm(b_disc, 'str_detect(TIP_DISC, "VISUAL")', 9)
   
   # 🚀 INYECCIÓN INFERIOR: PISTA DE ATERRIZAJE (6 Filas Exactas, Salto de 10)
-  # ⚠️ Corrección Senior Aplicada: Se reintegró la discapacidad Auditiva.
   f_disc <- 49 + (mes_objetivo - 1) * 10
   
   dfs_disc <- list(
@@ -136,7 +186,7 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   bloques_disc <- generar_bloques_inter(dfs_disc)
   range_write(ss = id_google_sheet, data = bloques_disc$E, range = paste0("ADOLESCENTES_RIESGO!C", f_disc), col_names=F, reformat=F)
   range_write(ss = id_google_sheet, data = bloques_disc$N, range = paste0("ADOLESCENTES_RIESGO!O", f_disc), col_names=F, reformat=F)
-  range_write(ss = id_google_sheet, data = bloques_disc$P, range = paste0("ADOLESCENTES_RIESGO!AG", f_disc), col_names=F, reformat=F)
+  range_write(ss = id_google_sheet, data = bloques_disc$P, range = paste0("ADOLESCENTES_RIESGO!AF", f_disc), col_names=F, reformat=F)
   
   # ====================================================================
   # PROCESAMIENTO 2: VIOLENCIA
@@ -158,7 +208,7 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   bloques_viol <- generar_bloques_inter(dfs_viol)
   range_write(ss = id_google_sheet, data = bloques_viol$E, range = paste0("ADOLESCENTES_RIESGO!C", f_viol), col_names=F, reformat=F)
   range_write(ss = id_google_sheet, data = bloques_viol$N, range = paste0("ADOLESCENTES_RIESGO!O", f_viol), col_names=F, reformat=F)
-  range_write(ss = id_google_sheet, data = bloques_viol$P, range = paste0("ADOLESCENTES_RIESGO!AG", f_viol), col_names=F, reformat=F)
+  range_write(ss = id_google_sheet, data = bloques_viol$P, range = paste0("ADOLESCENTES_RIESGO!AF", f_viol), col_names=F, reformat=F)
   
   # ====================================================================
   # PROCESAMIENTO 3: ESTADO NUTRICIONAL
@@ -180,7 +230,7 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   bloques_nutri <- generar_bloques_inter(dfs_nutri)
   range_write(ss = id_google_sheet, data = bloques_nutri$E, range = paste0("ADOLESCENTES_RIESGO!C", f_nutri), col_names=F, reformat=F)
   range_write(ss = id_google_sheet, data = bloques_nutri$N, range = paste0("ADOLESCENTES_RIESGO!O", f_nutri), col_names=F, reformat=F)
-  range_write(ss = id_google_sheet, data = bloques_nutri$P, range = paste0("ADOLESCENTES_RIESGO!AG", f_nutri), col_names=F, reformat=F)
+  range_write(ss = id_google_sheet, data = bloques_nutri$P, range = paste0("ADOLESCENTES_RIESGO!AF", f_nutri), col_names=F, reformat=F)
   
   # ====================================================================
   # PROCESAMIENTO 4: SALUD REPRODUCTIVA
@@ -211,7 +261,7 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   bloques_repro <- generar_bloques_inter(dfs_repro)
   range_write(ss = id_google_sheet, data = bloques_repro$E, range = paste0("ADOLESCENTES_RIESGO!C", f_repro), col_names=F, reformat=F)
   range_write(ss = id_google_sheet, data = bloques_repro$N, range = paste0("ADOLESCENTES_RIESGO!O", f_repro), col_names=F, reformat=F)
-  range_write(ss = id_google_sheet, data = bloques_repro$P, range = paste0("ADOLESCENTES_RIESGO!AG", f_repro), col_names=F, reformat=F)
+  range_write(ss = id_google_sheet, data = bloques_repro$P, range = paste0("ADOLESCENTES_RIESGO!AF", f_repro), col_names=F, reformat=F)
   
-  cat("✅ Trabajador 13 finalizado. Pista de aterrizaje desplegada sin sobreescribir fórmulas.\n")
+  cat("✅ Trabajador 13 finalizado con Cascada Étnica Inmaculada. Pista de aterrizaje desplegada sin sobreescribir fórmulas.\n")
 }
