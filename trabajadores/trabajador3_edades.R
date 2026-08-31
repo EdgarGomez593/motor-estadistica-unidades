@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 3: ETNIA, NACIONALIDAD Y PUEBLO (ESTÁNDAR OFICIAL MSP)
-# Arquitectura: Purga por Ticket -> Especialidad Oficial -> Catálogo 14 Códigos CIE-10
+# Arquitectura: Purga por Ticket -> Respeto a Autoidentificación -> Cascada Exclusiva Indígena
 # Coordenadas Originales: Etnia(24), Nacionalidad(38), Pueblo(58)
 # ====================================================================================
 library(dplyr)
@@ -8,7 +8,7 @@ library(stringr)
 library(googlesheets4)
 
 trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
-  cat("🌍 Trabajador 3 activado: Clasificando Etnia, Nacionalidad y Pueblo Oficial...\n")
+  cat("🌍 Trabajador 3 activado: Clasificando Etnia, Nacionalidad y Pueblo Exclusivo Indígena...\n")
   if(mes_objetivo > 12) return(invisible(NULL))
   
   # ====================================================================
@@ -55,8 +55,8 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
       ES = str_remove_all(str_trim(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE))), "[\r\n\"]"),
       CI = str_remove_all(str_trim(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10))), "[\r\n\"\\.]"),
       ET = str_remove_all(str_trim(toupper(ifelse(is.na(PCTE_AUTID_ETN), "", PCTE_AUTID_ETN))), "[\r\n\"]"),
-      NA_col = str_remove_all(str_trim(toupper(ifelse(is.na(PCTE_NAC_ETN), "", PCTE_NAC_ETN))), "[\r\n\"]"),
-      PU = str_remove_all(str_trim(toupper(ifelse(is.na(PCTE_PUEBLO), "", PCTE_PUEBLO))), "[\r\n\"]")
+      NA_col = str_remove_all(str_trim(toupper(ifelse(is.na(PCTE_NAC_ETN), "", PCTE_NAC_ETN))), "[\r\n\"\\.]"),
+      PU = str_remove_all(str_trim(toupper(ifelse(is.na(PCTE_PUEBLO), "", PCTE_PUEBLO))), "[\r\n\"\\.]")
     )
   
   # ====================================================================
@@ -66,22 +66,21 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
     filter(CI %in% codigos_emb) %>%
     filter(str_detect(CR, "PRIMER|^P$|^1$|^N$")) %>%
     filter(str_detect(ES, especialidades_validas)) %>%
-    # 🚀 LA PURGA POR TICKET: Unifica la métrica con Trabajadores 1 y 11
     distinct(TICKET, .keep_all = TRUE)
   
   # ====================================================================
-  # PASO 3: EMBUDO CONSTITUCIONAL Y CASCADA MILIMÉTRICA
+  # PASO 3: EMBUDO CONSTITUCIONAL Y CASCADA EXCLUSIVA INDÍGENA
   # ====================================================================
   base_clasificada <- base_intercultural %>%
     mutate(
       es_pueblo_huancavilca = str_detect(PU, "HUANCAVILCA"),
       tiene_pueblo = str_detect(PU, "CHIBULEO|HUANCAVILCA|KA.*ARI|CA.*ARI|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|KICHWA AMAZ.*|KISAPINCHA|QUISAPINCHA|KITUKARA|QUITUCARA|NATABUELA|OTAVALO|PALTAS|PANZALEO|PASTOS|PURUH.*|PURUHÁ|PURUHA|SALASA.*|SARAGURO|TOMABELA|WARAMKA|GUARANCA"),
-      tiene_nac = str_detect(NA_col, "ACHUAR|ANDOA|AWA|AWÁ|CHACHI|COF.*N|KOF.*N|EPERA|.*PERA|HUANCAVILCA|KICHWA|QUICHUA|SECOYA|SHIWIAR|SHUAR|TS.*CHILA|TSÁCHILA|WAORANI|HUAORANI|ZAPARA|ZÁPARA"),
       
-      ETN_RESC = case_when(tiene_pueblo | tiene_nac ~ "INDÍGENA", TRUE ~ ET),
-      NAC_RESC = case_when(tiene_pueblo & es_pueblo_huancavilca ~ "HUANCAVILCA", tiene_pueblo & !es_pueblo_huancavilca ~ "KICHWA", tiene_nac ~ NA_col, TRUE ~ ""),
+      # 🚀 REGLA 1: Respeto Absoluto a la Autoidentificación (Cero Rescate Étnico)
+      ETN_RESC = ET,
+      NAC_RESC = NA_col,
       
-      # 🚀 NIVEL 1: ETNIA (Máximo 9 - 10 espacios)
+      # 🚀 NIVEL 1: ETNIA (10 espacios: 0 al 9)
       iE = case_when(
         str_detect(ETN_RESC, 'AFRO.*') ~ 0,
         str_detect(ETN_RESC, 'BLANC.*') ~ 1,
@@ -91,12 +90,12 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
         str_detect(ETN_RESC, 'MULAT.*') ~ 5,
         str_detect(ETN_RESC, 'NEGR.*') ~ 6,
         str_detect(ETN_RESC, 'OTR.*') ~ 7,
-        str_detect(ETN_RESC, 'APLICA') ~ 8,
-        str_detect(ETN_RESC, 'SABE.*|RESPONDE') | ETN_RESC == "" | is.na(ETN_RESC) ~ 9,
-        TRUE ~ 9
+        str_detect(ETN_RESC, 'APLICA') ~ 9,
+        str_detect(ETN_RESC, 'SABE.*|RESPONDE') | ETN_RESC == "" | is.na(ETN_RESC) ~ 8,
+        TRUE ~ 8
       ),
       
-      # 🚀 NIVEL 2: NACIONALIDAD (Máximo 14 - 15 espacios)
+      # 🚀 REGLA 2 y 4: CASCADA NACIONALIDAD (15 espacios: 0 al 14, Amputación total para no indígenas)
       iN = case_when(
         iE == 2 ~ case_when(
           str_detect(NAC_RESC, 'ACHUAR') ~ 0, str_detect(NAC_RESC, 'ANDOA') ~ 1, str_detect(NAC_RESC, 'AWA') ~ 2,
@@ -104,27 +103,27 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
           str_detect(NAC_RESC, 'HUANCAVILCA') ~ 6, str_detect(NAC_RESC, 'KICHWA') ~ 7, str_detect(NAC_RESC, 'SECOYA') ~ 8,
           str_detect(NAC_RESC, 'SHIWIAR') ~ 9, str_detect(NAC_RESC, 'SHUAR') ~ 10, str_detect(NAC_RESC, 'TS.*CHILA') ~ 11,
           str_detect(NAC_RESC, 'WAORANI|HUAORANI') ~ 12, str_detect(NAC_RESC, 'ZAPARA') ~ 13,
-          TRUE ~ 14 
+          TRUE ~ 14 # Vacíos y "No Sabe/Responde" exclusivos de indígenas
         ),
-        TRUE ~ -1 
+        TRUE ~ -1 # Amputación de Mestizos, Blancos, etc.
       ),
       
-      # 🚀 NIVEL 3: PUEBLO (Máximo 18 - 19 espacios)
+      # 🚀 REGLA 2, 3 y 5: CASCADA PUEBLO (19 espacios: 0 al 18, Amputación total para no indígenas)
       iP = case_when(
         iE == 2 ~ case_when(
-          iN == 7 & tiene_pueblo & !es_pueblo_huancavilca ~ case_when(
+          tiene_pueblo & !es_pueblo_huancavilca ~ case_when(
             str_detect(PU, 'CHIBULEO') ~ 0, str_detect(PU, 'KA.*ARI|CA.*ARI') ~ 2, str_detect(PU, 'KARANKI|CARANQUI') ~ 3,
             str_detect(PU, 'KAYAMBI|CAYAMBI') ~ 4, str_detect(PU, 'KICHWA AMAZ.*') ~ 5, str_detect(PU, 'KISAPINCHA|QUISAPINCHA') ~ 6,
             str_detect(PU, 'KITUKARA|QUITUCARA') ~ 7, str_detect(PU, 'NATABUELA') ~ 8, str_detect(PU, 'OTAVALO') ~ 9,
             str_detect(PU, 'PALTAS') ~ 10, str_detect(PU, 'PANZALEO') ~ 11, str_detect(PU, 'PASTOS') ~ 12,
             str_detect(PU, 'PURUH.*') ~ 13, str_detect(PU, 'SALASA.*') ~ 14, str_detect(PU, 'SARAGURO') ~ 15,
             str_detect(PU, 'TOMABELA') ~ 16, str_detect(PU, 'WARAMKA|GUARANCA') ~ 17,
-            TRUE ~ 18 
+            TRUE ~ 18 # Vacíos exclusivos de indígenas
           ),
-          iN == 6 & es_pueblo_huancavilca ~ 1,
+          es_pueblo_huancavilca ~ 1,
           TRUE ~ 18 
         ),
-        TRUE ~ -1 
+        TRUE ~ -1 # Amputación de Mestizos, Blancos, etc.
       )
     )
   
@@ -150,7 +149,7 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
   v_Pueb  <- formatear_ceros_vector(cP)
   
   # ====================================================================
-  # PASO 5: INYECCIÓN EXACTA EN COORDENADAS ORIGINALES
+  # PASO 5: INYECCIÓN EXACTA EN COORDENADAS ORIGINALES (GPS SAGRADO)
   # ====================================================================
   range_write(ss = id_google_sheet, data = data.frame(v_Etnia), range = paste0("Censo_Obstetrico!", letra_col, "24"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(v_Nac),   range = paste0("Censo_Obstetrico!", letra_col, "38"), col_names = FALSE, reformat = FALSE)
@@ -162,5 +161,5 @@ trabajador3_Edades <- function(tabla_consolidada, id_google_sheet, mes_objetivo)
     range_write(ss = id_google_sheet, data = data.frame(v_Pueb),  range = paste0("Censo_Obstetrico!", letra_resumen, "58"), col_names = FALSE, reformat = FALSE)
   }, error = function(e) { cat("⚠️ Resumen omitido (columna Q inexistente).\n") })
   
-  cat("✅ Trabajador 3 finalizado. Matriz obstétrica intercultural actualizada en coordenadas originales (24, 38, 58).\n")
+  cat("✅ Trabajador 3 finalizado. Matriz obstétrica intercultural actualizada bajo estándar de sub-universo indígena en coordenadas originales (24, 38, 58).\n")
 }
