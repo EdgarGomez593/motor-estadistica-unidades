@@ -1,6 +1,6 @@
 # ====================================================================================
-# TRABAJADOR 11: MOTOR DE ESTADO NUTRICIONAL (MATRIZ ESPEJO)
-# Arquitectura: Cascada Étnica Inmaculada -> Matrices de 50 Columnas (GPS Intacto)
+# TRABAJADOR 11: MOTOR DE ESTADO NUTRICIONAL E INTERCULTURALIDAD EXPANDIDA
+# Arquitectura: Motor Híbrido (Pediátrico Fila a Fila + Obstétrico por Ticket)
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -9,53 +9,42 @@ library(googlesheets4)
 trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = NULL) {
   
   cat(paste0("🍼 Trabajador 11 activado: Calculando Inteligencia Nutricional para el mes ", mes_objetivo, "...\n"))
-  
-  if(mes_objetivo > 12) {
-    cat("⏭️ Trabajador 11: Modo Trimestral detectado. Omitiendo proceso.\n")
-    return(invisible(NULL))
-  }
+  if(mes_objetivo > 12) return(invisible(NULL))
   
   # ============================================================================
-  # 1. RADARES TOPOGRÁFICOS MAESTROS (Columnas y Filas)
+  # 1. RADARES TOPOGRÁFICOS MAESTROS Y ANTI-NA
   # ============================================================================
   col_destino_num <- mes_objetivo + 1
   letra_col_conteo <- LETTERS[col_destino_num] 
   
-  # ============================================================================
-  # 2. RADARES DE CABECERAS Y PURIFICADORES ANTI-NA
-  # ============================================================================
   nombres_cols <- names(tabla_consolidada)
   nombres_upper <- toupper(nombres_cols)
   
   col_edad_meses <- if(any(str_detect(nombres_upper, "PCTE_ANIOS_EN_MESES"))) nombres_cols[str_detect(nombres_upper, "PCTE_ANIOS_EN_MESES")][1] else { tabla_consolidada$PCTE_ANIOS_EN_MESES <- NA; "PCTE_ANIOS_EN_MESES" }
-  col_grp_pri <- if(any(str_detect(nombres_upper, "PCTE_GRP_PRI"))) nombres_cols[str_detect(nombres_upper, "PCTE_GRP_PRI")][1] else { tabla_consolidada$PCTE_GRP_PRI <- ""; "PCTE_GRP_PRI" }
-  col_hemo <- if(any(str_detect(nombres_upper, "PCTE_IND_ANEMIA_HEMOGLOBINA"))) nombres_cols[str_detect(nombres_upper, "PCTE_IND_ANEMIA_HEMOGLOBINA")][1] else { tabla_consolidada$PCTE_IND_ANEMIA_HEMOGLOBINA <- ""; "PCTE_IND_ANEMIA_HEMOGLOBINA" }
   col_imc <- if(any(str_detect(nombres_upper, "PCTE_ULT_IMC$"))) nombres_cols[str_detect(nombres_upper, "PCTE_ULT_IMC$")][1] else { tabla_consolidada$PCTE_ULT_IMC <- NA; "PCTE_ULT_IMC" }
-  col_tip_diag <- if(any(str_detect(nombres_upper, "ATEMED_TIP_DIAG|ATEMED_TIPO_DIAG"))) nombres_cols[str_detect(nombres_upper, "ATEMED_TIP_DIAG|ATEMED_TIPO_DIAG")][1] else { tabla_consolidada$ATEMED_TIP_DIAG <- ""; "ATEMED_TIP_DIAG" }
+  col_esp <- if(any(str_detect(nombres_upper, "PROF_ESP_ATE"))) nombres_cols[str_detect(nombres_upper, "PROF_ESP_ATE")][1] else { tabla_consolidada$PROF_ESP_ATE <- ""; "PROF_ESP_ATE" }
   
-  # Radares Interculturales (Escudos Estrictos)
   col_etn <- if(any(str_detect(nombres_upper, "AUTOIDENTIFICACION|ETNICA|AUTID_ETN"))) nombres_cols[str_detect(nombres_upper, "AUTOIDENTIFICACION|ETNICA|AUTID_ETN")][1] else { tabla_consolidada$PCTE_AUTID_ETN <- ""; "PCTE_AUTID_ETN" }
   col_nac <- if("PCTE_NAC_ETN" %in% nombres_upper) nombres_cols[nombres_upper == "PCTE_NAC_ETN"][1] else if(any(str_detect(nombres_upper, "NAC_ETN|NACIONALIDAD_ETN"))) nombres_cols[str_detect(nombres_upper, "NAC_ETN|NACIONALIDAD_ETN")][1] else { tabla_consolidada$PCTE_NAC_ETN <- ""; "PCTE_NAC_ETN" }
   col_pue <- if(any(str_detect(nombres_upper, "PUEBLO"))) nombres_cols[str_detect(nombres_upper, "PUEBLO")][1] else { tabla_consolidada$PCTE_PUEBLO <- ""; "PCTE_PUEBLO" }
   
   # ============================================================================
-  # 3. BASE MAESTRA: EXTRACCIÓN Y CASCADA ÉTNICA INMACULADA
+  # 2. BASE MAESTRA Y CASCADA ÉTNICA
   # ============================================================================
   base_maestra <- tabla_consolidada %>%
     mutate(
+      TICKET = str_trim(ifelse(is.na(ATEMED_ID) | ATEMED_ID == "", paste0("FILA_VACIA_", row_number()), ATEMED_ID)),
       EDAD_MESES = as.numeric(ifelse(is.na(!!sym(col_edad_meses)), -1, !!sym(col_edad_meses))),
       IMC = as.numeric(str_replace_all(ifelse(is.na(!!sym(col_imc)), -1, !!sym(col_imc)), ",", ".")),
       CIE = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10)), "[\r\n\"\\.]")),
-      GRP = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_grp_pri)), "", !!sym(col_grp_pri))), "[\r\n\"]")),
-      HEMO = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_hemo)), "", !!sym(col_hemo))), "[\r\n\"]")),
-      TIP = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_tip_diag)), "", !!sym(col_tip_diag))), "[\r\n\"]")),
+      ESP = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_esp)), "", !!sym(col_esp))), "[\r\n\"]")),
       CRON = str_squish(str_remove_all(toupper(ifelse(is.na(ATEMED_CRON_DIAG), "", ATEMED_CRON_DIAG)), "[\r\n\"]")),
+      
       ETN_RAW = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_etn)), "", !!sym(col_etn))), "[\r\n\"]")),
       NAC_RAW = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_nac)), "", !!sym(col_nac))), "[\r\n\"]")),
       PUE_RAW = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_pue)), "", !!sym(col_pue))), "[\r\n\"]"))
     ) %>%
     mutate(
-      # 🚀 REGLA 1 y 2: Radares de Rescate e Independencia
       es_pueblo_huancavilca = str_detect(PUE_RAW, "HUANCAVILCA"),
       tiene_pueblo = str_detect(PUE_RAW, "CHIBULEO|HUANCAVILCA|KA.*ARI|CA.*ARI|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|KICHWA AMAZ.*|KISAPINCHA|QUISAPINCHA|KITUKARA|QUITUCARA|NATABUELA|OTAVALO|PALTAS|PANZALEO|PASTOS|PURUH.*|PURUHÁ|PURUHA|SALASA.*|SARAGURO|TOMABELA|WARAMKA|GUARANCA"),
       tiene_nac = str_detect(NAC_RAW, "ACHUAR|ANDOA|AWA|AWÁ|CHACHI|COF.*N|KOF.*N|EPERA|.*PERA|HUANCAVILCA|KICHWA|QUICHUA|SECOYA|SHIWIAR|SHUAR|TS.*CHILA|TSÁCHILA|WAORANI|HUAORANI|ZAPARA|ZÁPARA"),
@@ -63,7 +52,6 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
       ETNIA_RESC = case_when(tiene_pueblo | tiene_nac ~ "INDÍGENA", TRUE ~ ETN_RAW),
       NAC_RESC = NAC_RAW, 
       
-      # 🚀 REGLA 3: Nivel 1 (ETNIA - 10 Opciones)
       iE = case_when(
         str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
         str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
@@ -74,7 +62,6 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
         TRUE ~ 9
       ),
       
-      # 🚀 REGLA 4: Nivel 2 (NACIONALIDAD - 15 Opciones). Amputación activa.
       iN = case_when(
         iE == 3 ~ case_when(
           str_detect(NAC_RESC, 'ACHUAR') ~ 1, str_detect(NAC_RESC, 'ANDOA') ~ 2, str_detect(NAC_RESC, 'AWA') ~ 3,
@@ -86,7 +73,6 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
         ), TRUE ~ -1 
       ),
       
-      # 🚀 REGLA 4 y 5: Nivel 3 (PUEBLO - 19 Opciones). Amputación activa.
       iP = case_when(
         iE == 3 ~ case_when(
           tiene_pueblo & !es_pueblo_huancavilca ~ case_when(
@@ -102,7 +88,6 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
         ), TRUE ~ -1 
       ),
       
-      # Reglas Clínicas Nutricionales
       esPrimeraGeneral = str_detect(CRON, "PRIMER|^P$|^1$|^N$"),
       esSubsecuenteGeneral = str_detect(CRON, "SUBSECUENTE|^S$|^2$"),
       esAguda = (CIE == "E441"),
@@ -112,21 +97,30 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
     )
   
   # ============================================================================
-  # 4. EXTRACCIÓN Y SUMATORIA DE POBLACIONES CLÍNICAS
+  # 3. EXTRACCIÓN Y SEPARACIÓN DE ECOSISTEMAS
   # ============================================================================
+  # 👶 PEDIATRÍA (Se mantiene análisis Fila a Fila)
   b_24 <- base_maestra %>% filter(EDAD_MESES >= 0 & EDAD_MESES < 24)
   b_59 <- base_maestra %>% filter(EDAD_MESES >= 0 & EDAD_MESES < 60)
   
-  b_emb <- base_maestra %>% filter(str_detect(GRP, "EMBARAZADAS")) %>%
+  # 🤰 OBSTETRICIA (Implante de ADN del T2 - Purga por Ticket y Especialidad)
+  b_emb <- base_maestra %>% 
+    filter(
+      CIE %in% c("Z351", "Z353", "Z359", "Z358", "Z348", "Z340", "Z356", "Z352"),
+      str_detect(ESP, "MEDICINA FAMILIAR Y COMUNITARIA|MEDICINA RURAL|OBSTETRICIA|PSICOLOGÍA CLÍNICA|PSICOLOGIA CLINICA|ODONTOLOGÍA|ODONTOLOGIA|ENFERMERÍA|ENFERMERIA"),
+      esPrimeraGeneral == TRUE
+    ) %>%
+    # 🚀 LA MAGIA: Eliminamos duplicados por Ticket preservando la data nutricional
+    distinct(TICKET, .keep_all = TRUE) %>%
     mutate(
-      esPrevEmbPrimera = (str_detect(TIP, "PREV") & str_detect(CIE, "^Z321|^Z34|^Z35") & esPrimeraGeneral),
-      esBajoPesoEmb = (IMC > 0 & IMC < 18 & esPrevEmbPrimera == TRUE),
-      esSobrepesoEmb = (IMC >= 25 & IMC <= 29.9 & esPrevEmbPrimera == TRUE),
-      esObesidadEmb = (IMC >= 30 & esPrevEmbPrimera == TRUE),
-      esAnemiaHemoEmb = str_detect(HEMO, "ANEMIA LEVE|ANEMIA MODERADA")
+      esBajoPesoEmb = (IMC > 0 & IMC < 18),
+      esSobrepesoEmb = (IMC >= 25 & IMC <= 29.9),
+      esObesidadEmb = (IMC >= 30)
     )
   
-  # Totales Superiores
+  # ============================================================================
+  # 4. SUMATORIA DE POBLACIONES
+  # ============================================================================
   t24_pri <- sum(b_24$esPrimeraGeneral, na.rm=T)
   t24_cro <- sum(b_24$esCronica, na.rm=T)
   t24_agu <- sum(b_24$esAguda, na.rm=T)
@@ -139,13 +133,13 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   t59_sob <- sum(b_59$esSobrepeso, na.rm=T)
   t59_sub <- sum(b_59$esSubsecuenteGeneral, na.rm=T)
   
-  tem_pri <- sum(b_emb$esPrevEmbPrimera, na.rm=T)
+  tem_pri <- nrow(b_emb) # Cada fila es exactamente un ticket único válido
   tem_obe <- sum(b_emb$esObesidadEmb, na.rm=T)
   tem_baj <- sum(b_emb$esBajoPesoEmb, na.rm=T)
   tem_sob <- sum(b_emb$esSobrepesoEmb, na.rm=T)
   
   # ============================================================================
-  # 5. INYECCIÓN DEL CUADRO RESUMEN SUPERIOR (Nube Nativa)
+  # 5. INYECCIÓN DEL CUADRO RESUMEN SUPERIOR 
   # ============================================================================
   fc <- function(x) { if (x > 0) return(x) else return(NA_real_) }
   
@@ -167,7 +161,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   range_write(ss = id_google_sheet, data = data.frame(fc(tem_sob)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "27"), col_names = FALSE, reformat = FALSE)
   
   # ============================================================================
-  # 6. MOTOR DE MATRIZ VERTICAL INTERCULTURAL (Bloques de 50 Columnas - GPS Intacto)
+  # 6. MATRIZ VERTICAL INTERCULTURAL (50 Cols - GPS Intacto)
   # ============================================================================
   salto_filas <- (mes_objetivo - 1) * 8
   f_inicio_24 <- 35 + salto_filas
@@ -179,16 +173,12 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
     
     sub <- base_filtro %>% filter(!!sym(indicador_logico) == TRUE)
     
-    # Solo cuenta a los que no fueron amputados (iN != -1)
     for(i in 1:10) vE[i] <- sum(sub$iE == i, na.rm=T)
     for(i in 1:15) vN[i] <- sum(sub$iN == i & sub$iE == 3, na.rm=T) 
     for(i in 1:19) vP[i] <- sum(sub$iP == i & sub$iE == 3, na.rm=T)
     
-    # 🚀 LA TUERCA CLAVE: 10 Etnia + 2 Huecos (Antiguos NA) + 15 Nac + 3 Huecos + 19 Pueblo + 1 Hueco = 50 Columnas.
-    # Esto garantiza que el Excel original no se mueva un milímetro.
     fila_completa <- c(vE, NA_real_, NA_real_, vN, NA_real_, NA_real_, NA_real_, vP, NA_real_)
     fila_completa[fila_completa == 0] <- NA_real_
-    
     return(fila_completa)
   }
   
@@ -213,11 +203,11 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   matriz_emb <- matriz_emb %>% mutate(across(everything(), as.numeric))
   
   # ============================================================================
-  # 7. INYECCIÓN BLINDADA
+  # 7. INYECCIÓN
   # ============================================================================
   range_write(ss = id_google_sheet, data = matriz_24, range = paste0("ESTADO_NUTRI!B", f_inicio_24), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = matriz_59, range = paste0("ESTADO_NUTRI!B", f_inicio_59), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = matriz_emb, range = paste0("ESTADO_NUTRI!B", f_inicio_emb), col_names = FALSE, reformat = FALSE)
   
-  cat("✅ Trabajador 11 finalizado. Matriz Intercultural Inmaculada (50 Cols, GPS Intacto) inyectada.\n")
+  cat("✅ Trabajador 11 finalizado. Matemática Obstétrica unificada con Censo.\n")
 }
