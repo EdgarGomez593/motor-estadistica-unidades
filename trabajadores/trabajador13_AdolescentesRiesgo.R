@@ -1,13 +1,13 @@
 # ====================================================================================
 # TRABAJADOR 13: ADOLESCENTES EN RIESGO (10 a 19 años)
-# Arquitectura: Doble Pista -> Matriz Clínica + Cascada Étnica Inmaculada (GPS Intacto)
+# Arquitectura: Doble Pista -> Cascada Étnica Inmaculada + Escudos Anti-Duplicados
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
 trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
-  cat("🎯 Trabajador 13 activado: Desplegando Cascada Étnica Inmaculada...\n")
+  cat("🎯 Trabajador 13 activado: Desplegando Cascada Étnica y Escudos Forenses...\n")
   if(mes_objetivo > 12) return(invisible(NULL))
   
   # ====================================================================
@@ -204,15 +204,28 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   range_write(ss = id_google_sheet, data = bloques_viol$P, range = paste0("ADOLESCENTES_RIESGO!AF", f_viol), col_names=F, reformat=F)
   
   # ====================================================================
-  # PROCESAMIENTO 3: ESTADO NUTRICIONAL (Sin purga, suma diagnósticos)
+  # 🚀 PROCESAMIENTO 3: ESTADO NUTRICIONAL (Escudo Anti-Duplicados Activado)
   # ====================================================================
-  b_nutri <- base_limpia %>% filter(CIE %in% c("E43X", "E43", "E441", "E660", "E669"))
+  b_nutri <- base_limpia %>% 
+    filter(CIE %in% c("E43X", "E43", "E441", "E660", "E669")) %>%
+    mutate(
+      COND_NUTR = case_when(
+        CIE %in% c("E43X", "E43", "E441") ~ "DESNUTRICION",
+        CIE %in% c("E660", "E669") ~ "SOBREPESO",
+        TRUE ~ "OTRO"
+      )
+    ) %>%
+    # Bóveda forense: Un paciente suma solo una vez por condición y por ticket
+    distinct(TICKET, COND_NUTR, .keep_all = TRUE)
   
-  procesar_top_hm(b_nutri, 'CIE %in% c("E43X", "E43", "E441")', 28)
-  procesar_top_hm(b_nutri, 'CIE %in% c("E660", "E669")', 29)
+  procesar_top_hm(b_nutri, 'COND_NUTR == "DESNUTRICION"', 28)
+  procesar_top_hm(b_nutri, 'COND_NUTR == "SOBREPESO"', 29)
   
   f_nutri <- 253 + (mes_objetivo - 1) * 7
-  dfs_nutri <- list( b_nutri %>% filter(CIE %in% c("E43X", "E43", "E441")), b_nutri %>% filter(CIE %in% c("E660", "E669")) )
+  dfs_nutri <- list( 
+    b_nutri %>% filter(COND_NUTR == "DESNUTRICION"), 
+    b_nutri %>% filter(COND_NUTR == "SOBREPESO") 
+  )
   
   bloques_nutri <- generar_bloques_inter(dfs_nutri)
   range_write(ss = id_google_sheet, data = bloques_nutri$E, range = paste0("ADOLESCENTES_RIESGO!C", f_nutri), col_names=F, reformat=F)
@@ -224,7 +237,7 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   # ====================================================================
   b_repro <- base_limpia %>% 
     filter(esMujer) %>%
-    # 🚀 BLINDAJE OBSTÉTRICO: Purga por Ticket + Especialidad + 14 Códigos
+    # BLINDAJE OBSTÉTRICO: Especialidades válidas + Purga por Ticket
     filter(str_detect(ESP, especialidades_validas)) %>%
     distinct(TICKET, .keep_all = TRUE)
   
@@ -250,5 +263,5 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   range_write(ss = id_google_sheet, data = bloques_repro$N, range = paste0("ADOLESCENTES_RIESGO!O", f_repro), col_names=F, reformat=F)
   range_write(ss = id_google_sheet, data = bloques_repro$P, range = paste0("ADOLESCENTES_RIESGO!AF", f_repro), col_names=F, reformat=F)
   
-  cat("✅ Trabajador 13 finalizado con Cascada Étnica Inmaculada y Blindaje Obstétrico.\n")
+  cat("✅ Trabajador 13 finalizado con Escudos Anti-Duplicados y Cascada Étnica Inmaculada.\n")
 }
