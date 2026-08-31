@@ -232,17 +232,17 @@ trabajador13_AdolescentesRiesgo <- function(tabla_consolidada, id_google_sheet, 
   range_write(ss = id_google_sheet, data = bloques_nutri$N, range = paste0("ADOLESCENTES_RIESGO!O", f_nutri), col_names=F, reformat=F)
   range_write(ss = id_google_sheet, data = bloques_nutri$P, range = paste0("ADOLESCENTES_RIESGO!AF", f_nutri), col_names=F, reformat=F)
   
-  # ====================================================================
+# ====================================================================
   # PROCESAMIENTO 4: SALUD REPRODUCTIVA (Alineado a Censo Obstétrico)
   # ====================================================================
   b_repro <- base_limpia %>% 
     filter(esMujer) %>%
-    # BLINDAJE OBSTÉTRICO: Especialidades válidas + Purga por Ticket
     filter(str_detect(ESP, especialidades_validas)) %>%
     distinct(TICKET, .keep_all = TRUE)
   
-  cond_emb_14 <- 'str_detect(TIP, "PREV") & CIE %in% codigos_emb & EDAD >= 10 & EDAD <= 14'
-  cond_emb_19 <- 'str_detect(TIP, "PREV") & CIE %in% codigos_emb & EDAD >= 15 & EDAD <= 19'
+  # 🚀 CIRUGÍA APLICADA: Se elimina el filtro "PREV" para recuperar a las 72 pacientes mal digitadas
+  cond_emb_14 <- 'CIE %in% codigos_emb & EDAD >= 10 & EDAD <= 14'
+  cond_emb_19 <- 'CIE %in% codigos_emb & EDAD >= 15 & EDAD <= 19'
   cond_post_14 <- 'CIE == "Z392" & EDAD >= 10 & EDAD <= 14'
   cond_post_19 <- 'CIE == "Z392" & EDAD >= 15 & EDAD <= 19'
   
