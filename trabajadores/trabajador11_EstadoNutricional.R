@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 11: MOTOR DE ESTADO NUTRICIONAL E INTERCULTURALIDAD EXPANDIDA
-# Arquitectura: Motor Híbrido (Pediátrico Fila a Fila + Obstétrico por Ticket)
+# Arquitectura: Motor Híbrido -> Lógica Universal CIE-10 Embarazo
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -8,12 +8,8 @@ library(googlesheets4)
 
 trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = NULL) {
   
-  cat(paste0("🍼 Trabajador 11 activado: Calculando Inteligencia Nutricional para el mes ", mes_objetivo, "...\n"))
   if(mes_objetivo > 12) return(invisible(NULL))
   
-  # ============================================================================
-  # 1. RADARES TOPOGRÁFICOS MAESTROS Y ANTI-NA
-  # ============================================================================
   col_destino_num <- mes_objetivo + 1
   letra_col_conteo <- LETTERS[col_destino_num] 
   
@@ -28,9 +24,6 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   col_nac <- if("PCTE_NAC_ETN" %in% nombres_upper) nombres_cols[nombres_upper == "PCTE_NAC_ETN"][1] else if(any(str_detect(nombres_upper, "NAC_ETN|NACIONALIDAD_ETN"))) nombres_cols[str_detect(nombres_upper, "NAC_ETN|NACIONALIDAD_ETN")][1] else { tabla_consolidada$PCTE_NAC_ETN <- ""; "PCTE_NAC_ETN" }
   col_pue <- if(any(str_detect(nombres_upper, "PUEBLO"))) nombres_cols[str_detect(nombres_upper, "PUEBLO")][1] else { tabla_consolidada$PCTE_PUEBLO <- ""; "PCTE_PUEBLO" }
   
-  # ============================================================================
-  # 2. BASE MAESTRA Y CASCADA ÉTNICA
-  # ============================================================================
   base_maestra <- tabla_consolidada %>%
     mutate(
       TICKET = str_trim(ifelse(is.na(ATEMED_ID) | ATEMED_ID == "", paste0("FILA_VACIA_", row_number()), ATEMED_ID)),
@@ -96,21 +89,15 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
       esAnemiaNino = (CIE %in% c("D46X", "D46"))
     )
   
-  # ============================================================================
-  # 3. EXTRACCIÓN Y SEPARACIÓN DE ECOSISTEMAS
-  # ============================================================================
-  # 👶 PEDIATRÍA (Se mantiene análisis Fila a Fila)
   b_24 <- base_maestra %>% filter(EDAD_MESES >= 0 & EDAD_MESES < 24)
   b_59 <- base_maestra %>% filter(EDAD_MESES >= 0 & EDAD_MESES < 60)
   
-  # 🤰 OBSTETRICIA (Implante de ADN del T2 - Purga por Ticket y Especialidad)
+  # 🤰 OBSTETRICIA (Lógica Universal CIE-10 por Ticket)
   b_emb <- base_maestra %>% 
     filter(
-      CIE %in% c("Z351", "Z353", "Z359", "Z358", "Z348", "Z340", "Z356", "Z352"),
-      str_detect(ESP, "MEDICINA FAMILIAR Y COMUNITARIA|MEDICINA RURAL|OBSTETRICIA|PSICOLOGÍA CLÍNICA|PSICOLOGIA CLINICA|ODONTOLOGÍA|ODONTOLOGIA|ENFERMERÍA|ENFERMERIA"),
+      str_detect(CIE, "^Z321|^Z34|^Z35"),
       esPrimeraGeneral == TRUE
     ) %>%
-    # 🚀 LA MAGIA: Eliminamos duplicados por Ticket preservando la data nutricional
     distinct(TICKET, .keep_all = TRUE) %>%
     mutate(
       esBajoPesoEmb = (IMC > 0 & IMC < 18),
@@ -118,9 +105,6 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
       esObesidadEmb = (IMC >= 30)
     )
   
-  # ============================================================================
-  # 4. SUMATORIA DE POBLACIONES
-  # ============================================================================
   t24_pri <- sum(b_24$esPrimeraGeneral, na.rm=T)
   t24_cro <- sum(b_24$esCronica, na.rm=T)
   t24_agu <- sum(b_24$esAguda, na.rm=T)
@@ -133,14 +117,11 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   t59_sob <- sum(b_59$esSobrepeso, na.rm=T)
   t59_sub <- sum(b_59$esSubsecuenteGeneral, na.rm=T)
   
-  tem_pri <- nrow(b_emb) # Cada fila es exactamente un ticket único válido
+  tem_pri <- nrow(b_emb) 
   tem_obe <- sum(b_emb$esObesidadEmb, na.rm=T)
   tem_baj <- sum(b_emb$esBajoPesoEmb, na.rm=T)
   tem_sob <- sum(b_emb$esSobrepesoEmb, na.rm=T)
   
-  # ============================================================================
-  # 5. INYECCIÓN DEL CUADRO RESUMEN SUPERIOR 
-  # ============================================================================
   fc <- function(x) { if (x > 0) return(x) else return(NA_real_) }
   
   range_write(ss = id_google_sheet, data = data.frame(fc(t24_pri)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "3"), col_names = FALSE, reformat = FALSE)
@@ -160,9 +141,6 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   range_write(ss = id_google_sheet, data = data.frame(fc(tem_baj)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "26"), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = data.frame(fc(tem_sob)), range = paste0("ESTADO_NUTRI!", letra_col_conteo, "27"), col_names = FALSE, reformat = FALSE)
   
-  # ============================================================================
-  # 6. MATRIZ VERTICAL INTERCULTURAL (50 Cols - GPS Intacto)
-  # ============================================================================
   salto_filas <- (mes_objetivo - 1) * 8
   f_inicio_24 <- 35 + salto_filas
   f_inicio_59 <- 132 + salto_filas
@@ -170,7 +148,6 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   
   construir_fila_plana <- function(base_filtro, indicador_logico) {
     vE <- numeric(10); vN <- numeric(15); vP <- numeric(19)
-    
     sub <- base_filtro %>% filter(!!sym(indicador_logico) == TRUE)
     
     for(i in 1:10) vE[i] <- sum(sub$iE == i, na.rm=T)
@@ -202,12 +179,7 @@ trabajador11_EstadoNutricional <- function(tabla_consolidada, id_google_sheet, m
   matriz_59 <- matriz_59 %>% mutate(across(everything(), as.numeric))
   matriz_emb <- matriz_emb %>% mutate(across(everything(), as.numeric))
   
-  # ============================================================================
-  # 7. INYECCIÓN
-  # ============================================================================
   range_write(ss = id_google_sheet, data = matriz_24, range = paste0("ESTADO_NUTRI!B", f_inicio_24), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = matriz_59, range = paste0("ESTADO_NUTRI!B", f_inicio_59), col_names = FALSE, reformat = FALSE)
   range_write(ss = id_google_sheet, data = matriz_emb, range = paste0("ESTADO_NUTRI!B", f_inicio_emb), col_names = FALSE, reformat = FALSE)
-  
-  cat("✅ Trabajador 11 finalizado. Matemática Obstétrica unificada con Censo.\n")
 }
