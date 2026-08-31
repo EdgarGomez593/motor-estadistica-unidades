@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 2: OBSTETRICIA EDADES Y VULNERABILIDAD (ESTÁNDAR OFICIAL MSP)
-# Arquitectura: Purga por Ticket -> Filtro Especialidad Exacto -> Catálogo 14 Códigos
+# Arquitectura: Filtro Clínico -> Purga Inteligente -> Catálogo 14 Códigos -> 100% 1ra Vez
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -21,7 +21,7 @@ trabajador2_General <- function(tabla_consolidada, id_google_sheet, mes_objetivo
   # ====================================================================
   especialidades_validas <- "MEDICINA GENERAL INTEGRAL|MEDICINA FAMILIAR Y COMUNITARIA|MEDICINA RURAL|MEDICO RURAL|MÉDICO RURAL|GINECOLOGÍA Y OBSTETRICIA|GINECOLOGIA Y OBSTETRICIA|ATENCIÓN PRIMARIA EN SALUD|ATENCION PRIMARIA EN SALUD|OBSTETRICIA|OBSTETRICIA RURAL|MEDICINA GENERAL"
   
-  codigos_emb <- "Z340|Z348|Z349|Z350|Z351|Z352|Z353|Z354|Z355|Z356|Z357|Z358|Z359|Z321"
+  codigos_emb <- c("Z340", "Z348", "Z349", "Z350", "Z351", "Z352", "Z353", "Z354", "Z355", "Z356", "Z357", "Z358", "Z359", "Z321")
   
   # Blindaje de columnas (Por si algún archivo mensual no trae cédula o discapacidad)
   nombres_cols <- names(tabla_consolidada)
@@ -31,13 +31,13 @@ trabajador2_General <- function(tabla_consolidada, id_google_sheet, mes_objetivo
   if (!"PROF_ESP_ATE" %in% nombres_cols) tabla_consolidada$PROF_ESP_ATE <- ""
   
   # ====================================================================
-  # PASO 1: LA PURGA INICIAL (1 Ticket = 1 Consulta)
+  # PASO 1: PREPARACIÓN Y LIMPIEZA (Sin Purga Prematura)
   # ====================================================================
-  base_limpia <- tabla_consolidada %>%
+  base_preparada <- tabla_consolidada %>%
     filter(!is.na(ATEMED_ID) & str_trim(ATEMED_ID) != "") %>%
-    distinct(ATEMED_ID, .keep_all = TRUE) %>%
     mutate(
-      CIE = str_remove_all(str_trim(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10))), "[\r\n\"]"),
+      TICKET = str_trim(ATEMED_ID),
+      CIE = str_remove_all(str_trim(toupper(ifelse(is.na(ATEMED_CIE10), "", ATEMED_CIE10))), "[\r\n\"\\.]"),
       ESP = str_remove_all(str_trim(toupper(ifelse(is.na(PROF_ESP_ATE), "", PROF_ESP_ATE))), "[\r\n\"]"),
       EDAD = as.numeric(PCTE_ANIOS), 
       CED = str_remove_all(str_trim(toupper(ifelse(is.na(PCTE_IDE), "", PCTE_IDE))), "[\r\n\"]"),
@@ -46,31 +46,34 @@ trabajador2_General <- function(tabla_consolidada, id_google_sheet, mes_objetivo
     )
   
   # ====================================================================
-  # PASO 2: FILTRADO CLÍNICO Y DEMOGRÁFICO
+  # PASO 2: FILTRADO CLÍNICO, CRONOLÓGICO Y PURGA INTELIGENTE
   # ====================================================================
   
-  # Filtrar solo por las especialidades médicas/obstétricas permitidas
-  base_especialidades <- base_limpia %>% 
-    filter(str_detect(ESP, especialidades_validas))
+  # Filtro Base: Especialidades permitidas y SOLO Primera Vez
+  base_valida <- base_preparada %>% 
+    filter(str_detect(ESP, especialidades_validas)) %>%
+    filter(str_detect(CRO, "PRIMER|^P$|^1$|^N$"))
   
   # -- BLOQUE 1: ATENCIONES DE EMBARAZO POR EDADES --
-  base_embarazo <- base_especialidades %>% 
-    filter(str_detect(CIE, codigos_emb) & !is.na(EDAD))
+  base_embarazo <- base_valida %>% 
+    filter(CIE %in% codigos_emb & !is.na(EDAD)) %>%
+    distinct(TICKET, .keep_all = TRUE) # 🚀 PURGA AQUÍ: Solo de embarazos reales
   
-  m9 <- nrow(base_embarazo %>% filter(EDAD < 9))
-  m1014 <- nrow(base_embarazo %>% filter(EDAD >= 10 & EDAD <= 14))
-  m1519 <- nrow(base_embarazo %>% filter(EDAD >= 15 & EDAD <= 19))
-  m40 <- nrow(base_embarazo %>% filter(EDAD >= 40))
+  m9 <- sum(base_embarazo$EDAD < 9, na.rm = TRUE)
+  m1014 <- sum(base_embarazo$EDAD >= 10 & base_embarazo$EDAD <= 14, na.rm = TRUE)
+  m1519 <- sum(base_embarazo$EDAD >= 15 & base_embarazo$EDAD <= 19, na.rm = TRUE)
+  m40 <- sum(base_embarazo$EDAD >= 40, na.rm = TRUE)
   
-  # Discapacidad: Filtramos SI, excluimos cédulas vacías, contamos la cédula una sola vez
+  # Discapacidad: Filtramos SI/SÍ, excluimos cédulas vacías, contamos la cédula una sola vez
   disc <- base_embarazo %>%
-    filter(DISC == "SI" & CED != "") %>%
+    filter(str_detect(DISC, "^SI|^SÍ") & CED != "") %>%
     distinct(CED) %>%
     nrow()
   
   # -- BLOQUE 2: PRIMER CONTROL POSTPARTO --
-  post <- base_especialidades %>%
-    filter(CIE == "Z392" & str_detect(CRO, "PRIMER|^P$|^1$|^N$")) %>%
+  post <- base_valida %>%
+    filter(CIE == "Z392") %>%
+    distinct(TICKET, .keep_all = TRUE) %>% # 🚀 PURGA AQUÍ: Solo de postpartos reales
     nrow()
   
   # ====================================================================
