@@ -1,6 +1,6 @@
 # ====================================================================================
 # TRABAJADOR 15: INTELIGENCIA OPERATIVA - SALUD MENTAL (MATRIZ ESPEJO)
-# Arquitectura: GPS 138 Columnas (9 Filas Auto-limpieza) -> Cascada Étnica + Escudo SOGIESC
+# Arquitectura: GPS 138 Columnas -> Respeto Autoidentidad + Cascada Exclusiva Indígena
 # ====================================================================================
 library(dplyr)
 library(stringr)
@@ -8,7 +8,7 @@ library(googlesheets4)
 
 trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = NULL) {
   
-  cat(paste0("🧠 Trabajador 15 activado: Calculando Salud Mental (Matriz Expandida) para el mes ", mes_objetivo, "...\n"))
+  cat(paste0("🧠 Trabajador 15 activado: Calculando Salud Mental Exclusiva Indígena para el mes ", mes_objetivo, "...\n"))
   
   if(mes_objetivo > 12) {
     cat("⏭️ Trabajador 15: Modo Trimestral detectado. Omitiendo proceso.\n")
@@ -49,6 +49,7 @@ trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_obj
       TIP = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_tip)), "", !!sym(col_tip))), "[\r\n\"]")),
       CRO = str_squish(str_remove_all(toupper(ifelse(is.na(!!sym(col_cro)), "", !!sym(col_cro))), "[\r\n\"]"))
     ) %>%
+    # 🚀 REGLA 0: Filtros Intocables
     filter(
       str_detect(CIE, "^(F412|F938|F321|F320)"),
       str_detect(TIP, "MORB"),
@@ -69,7 +70,7 @@ trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_obj
   }
 
   # ============================================================================
-  # 4. ESCUDO SOGIESC Y CASCADA ÉTNICA INMACULADA
+  # 4. ESCUDO SOGIESC Y CASCADA EXCLUSIVA INDÍGENA
   # ============================================================================
   base_clasificada <- base_filtrada %>%
     mutate(
@@ -88,24 +89,31 @@ trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_obj
         TRUE ~ 0
       ),
       
-      # Cascada Étnica
+      # Radares Antropológicos
       es_pueblo_huancavilca = str_detect(PUE_RAW, "HUANCAVILCA"),
       tiene_pueblo = str_detect(PUE_RAW, "CHIBULEO|HUANCAVILCA|KA.*ARI|CA.*ARI|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|KICHWA AMAZ.*|KISAPINCHA|QUISAPINCHA|KITUKARA|QUITUCARA|NATABUELA|OTAVALO|PALTAS|PANZALEO|PASTOS|PURUH.*|PURUHÁ|PURUHA|SALASA.*|SARAGURO|TOMABELA|WARAMKA|GUARANCA"),
       tiene_nac = str_detect(NAC_RAW, "ACHUAR|ANDOA|AWA|AWÁ|CHACHI|COF.*N|KOF.*N|EPERA|.*PERA|HUANCAVILCA|KICHWA|QUICHUA|SECOYA|SHIWIAR|SHUAR|TS.*CHILA|TSÁCHILA|WAORANI|HUAORANI|ZAPARA|ZÁPARA"),
       
-      ETNIA_RESC = case_when(tiene_pueblo | tiene_nac ~ "INDÍGENA", TRUE ~ ETN_RAW),
+      # 🚀 REGLA 1: RESPETO ABSOLUTO A LA AUTOIDENTIFICACIÓN (Cero Rescate)
+      ETNIA_RESC = ETN_RAW,
       NAC_RESC = NAC_RAW, 
       
+      # 🚀 REGLA 4: NIVEL 1 - ETNIA (10 Espacios)
       iE = case_when(
-        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
-        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
-        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, str_detect(ETNIA_RESC, 'MULAT.*') ~ 6,
-        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, str_detect(ETNIA_RESC, 'OTR.*') ~ 8,
+        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, 
+        str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
+        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, 
+        str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
+        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, 
+        str_detect(ETNIA_RESC, 'MULAT.*') ~ 6,
+        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, 
+        str_detect(ETNIA_RESC, 'OTR.*') ~ 8,
         str_detect(ETNIA_RESC, 'APLICA') ~ 10,
         str_detect(ETNIA_RESC, 'SABE.*|RESPONDE') | ETNIA_RESC == "" | is.na(ETNIA_RESC) ~ 9, 
         TRUE ~ 9
       ),
       
+      # 🚀 REGLA 2 y 4: NIVEL 2 - NACIONALIDAD (15 Espacios - Exclusiva Indígena)
       iN = case_when(
         iE == 3 ~ case_when(
           str_detect(NAC_RESC, 'ACHUAR') ~ 1, str_detect(NAC_RESC, 'ANDOA') ~ 2, str_detect(NAC_RESC, 'AWA') ~ 3,
@@ -113,10 +121,12 @@ trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_obj
           str_detect(NAC_RESC, 'HUANCAVILCA') ~ 7, str_detect(NAC_RESC, 'KICHWA|QUICHUA') ~ 8, str_detect(NAC_RESC, 'SECOYA') ~ 9,
           str_detect(NAC_RESC, 'SHIWIAR') ~ 10, str_detect(NAC_RESC, 'SHUAR') ~ 11, str_detect(NAC_RESC, 'TS.*CHILA') ~ 12,
           str_detect(NAC_RESC, 'WAORANI|HUAORANI') ~ 13, str_detect(NAC_RESC, 'ZAPARA') ~ 14, 
-          TRUE ~ 15
-        ), TRUE ~ -1 
+          TRUE ~ 15 # Vacíos Exclusivos Indígenas
+        ), 
+        TRUE ~ -1 # Amputación Estricta
       ),
       
+      # 🚀 REGLA 2, 3 y 5: NIVEL 3 - PUEBLO (19 Espacios - Exclusiva Indígena)
       iP = case_when(
         iE == 3 ~ case_when(
           tiene_pueblo & !es_pueblo_huancavilca ~ case_when(
@@ -125,11 +135,13 @@ trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_obj
             str_detect(PUE_RAW, 'KITUKARA|QUITUCARA') ~ 8, str_detect(PUE_RAW, 'NATABUELA') ~ 9, str_detect(PUE_RAW, 'OTAVALO') ~ 10,
             str_detect(PUE_RAW, 'PALTAS') ~ 11, str_detect(PUE_RAW, 'PANZALEO') ~ 12, str_detect(PUE_RAW, 'PASTOS') ~ 13,
             str_detect(PUE_RAW, 'PURUH.*') ~ 14, str_detect(PUE_RAW, 'SALASA.*') ~ 15, str_detect(PUE_RAW, 'SARAGURO') ~ 16,
-            str_detect(PUE_RAW, 'TOMABELA') ~ 17, str_detect(PUE_RAW, 'WARAMKA|GUARANCA') ~ 18, TRUE ~ 19
+            str_detect(PUE_RAW, 'TOMABELA') ~ 17, str_detect(PUE_RAW, 'WARAMKA|GUARANCA') ~ 18, 
+            TRUE ~ 19 # Vacíos Exclusivos Indígenas
           ),
           es_pueblo_huancavilca ~ 2,
-          TRUE ~ 19
-        ), TRUE ~ -1 
+          TRUE ~ 19 # Vacíos Exclusivos Indígenas
+        ), 
+        TRUE ~ -1 # Amputación Estricta
       )
     ) %>%
     filter(idx_gen > 0 & fCie > 0)
@@ -146,9 +158,11 @@ trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_obj
       fC <- fila$fCie
       gI <- fila$idx_gen - 1 
       
+      # 🚀 ETNIA SIEMPRE SUMA
       cE <- (fila$iE - 1) * 3 + gI + 1
       matriz_gigante[fC, cE] <- matriz_gigante[fC, cE] + 1
       
+      # 🚀 NACIONALIDAD Y PUEBLO SOLO SUMAN SI SON INDÍGENAS (Evita Ghost Data)
       if (fila$iN != -1) {
         cN <- 30 + (fila$iN - 1) * 3 + gI + 1
         matriz_gigante[fC, cN] <- matriz_gigante[fC, cN] + 1
@@ -164,12 +178,10 @@ trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_obj
   
   # ============================================================================
   # 6. AUTO-LIMPIEZA Y DISPARO A GOOGLE SHEETS
-  # ============================================================================
+  # ====================================================================
   matriz_gigante[matriz_gigante == 0] <- NA_real_
   df_final <- as.data.frame(matriz_gigante)
   
-  # La inyección se hace con range_write directo. Como en R no existe rwrite_blindado nativamente
-  # a menos que lo tengas definido en tu entorno, usaré range_write estándar para seguridad.
   coordenada_objetivo <- paste0("SALUD_MENTAL!C", fila_inicio_mes)
   
   range_write(
@@ -180,5 +192,5 @@ trabajador15_SaludMental <- function(tabla_consolidada, id_google_sheet, mes_obj
     reformat = FALSE
   )
   
-  cat("✅ Trabajador 15 finalizado. Matriz Salud Mental de 9x138 inyectada en la nube.\n")
+  cat("✅ Trabajador 15 finalizado. Matriz Salud Mental Inmaculada (Sub-Universo Indígena y Escudo SOGIESC) inyectada en la nube.\n")
 }
