@@ -1,13 +1,13 @@
 # ====================================================================================
 # TRABAJADOR 12: INTELIGENCIA OPERATIVA - VIOLENCIA FAMILIAR (MATRIZ ESPEJO)
-# Arquitectura: Cascada Étnica Inmaculada + Escudo SOGIESC (Detección Trans & Misclicks)
+# Arquitectura: Respeto Autoidentidad + Cascada Exclusiva Indígena + Escudo SOGIESC
 # ====================================================================================
 library(dplyr)
 library(stringr)
 library(googlesheets4)
 
 trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objetivo) {
-  cat("🛡️ Trabajador 12 activado: Procesando Violencia Familiar (Lógica SOGIESC y Étnica)...\n")
+  cat("🛡️ Trabajador 12 activado: Procesando Violencia Familiar (Lógica SOGIESC y Cascada Indígena)...\n")
   
   # ====================================================================
   # 1. ARQUITECTURA DE COORDENADAS (GPS INTACTO)
@@ -65,15 +65,14 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
   }
 
   # ====================================================================
-  # 4. LOGICA SOGIESC (EL ESCUDO LGBTI Y CORRECCIÓN DE MISCLICKS)
+  # 4. LÓGICA SOGIESC (EL ESCUDO LGBTI Y CORRECCIÓN DE MISCLICKS)
   # ====================================================================
   base_clasificada <- base_filtrada %>%
     mutate(
       # El paciente es LGBTI SÓLO si su orientación lo dicta o si su identidad es Trans.
       esLGBTI = str_detect(ORI_RAW, "GAY|LESBIANA|BISEXUAL") | str_detect(IDE_RAW, "TRANS"),
       
-      # Si no es LGBTI confirmado, recae automáticamente en su sexo biológico puro
-      # Esto corrige los misclicks y asume "cisgénero" ante los vacíos
+      # Si no es LGBTI confirmado, recae automáticamente en su sexo biológico
       esHombre = !esLGBTI & str_detect(SEXO_RAW, "HOMBRE|^M$"),
       esMujer = !esLGBTI & str_detect(SEXO_RAW, "MUJER|^F$"),
       
@@ -90,25 +89,32 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
       ),
       
       # ====================================================================
-      # 5. CASCADA ÉTNICA INMACULADA (REGLAS 1 A 5)
+      # 5. CASCADA ÉTNICA EXCLUSIVA INDÍGENA (REGLAS 1 A 5)
       # ====================================================================
       es_pueblo_huancavilca = str_detect(PUE_RAW, "HUANCAVILCA"),
       tiene_pueblo = str_detect(PUE_RAW, "CHIBULEO|HUANCAVILCA|KA.*ARI|CA.*ARI|KARANKI|CARANQUI|KAYAMBI|CAYAMBI|KICHWA AMAZ.*|KISAPINCHA|QUISAPINCHA|KITUKARA|QUITUCARA|NATABUELA|OTAVALO|PALTAS|PANZALEO|PASTOS|PURUH.*|PURUHÁ|PURUHA|SALASA.*|SARAGURO|TOMABELA|WARAMKA|GUARANCA"),
       tiene_nac = str_detect(NAC_RAW, "ACHUAR|ANDOA|AWA|AWÁ|CHACHI|COF.*N|KOF.*N|EPERA|.*PERA|HUANCAVILCA|KICHWA|QUICHUA|SECOYA|SHIWIAR|SHUAR|TS.*CHILA|TSÁCHILA|WAORANI|HUAORANI|ZAPARA|ZÁPARA"),
       
-      ETNIA_RESC = case_when(tiene_pueblo | tiene_nac ~ "INDÍGENA", TRUE ~ ETN_RAW),
+      # 🚀 REGLA 1: RESPETO ABSOLUTO A LA AUTOIDENTIFICACIÓN (Cero Rescate)
+      ETNIA_RESC = ETN_RAW,
       NAC_RESC = NAC_RAW, 
       
+      # 🚀 REGLA 4: NIVEL 1 - ETNIA (10 Espacios)
       iE = case_when(
-        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
-        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
-        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, str_detect(ETNIA_RESC, 'MULAT.*') ~ 6,
-        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, str_detect(ETNIA_RESC, 'OTR.*') ~ 8,
+        str_detect(ETNIA_RESC, 'AFRO.*') ~ 1, 
+        str_detect(ETNIA_RESC, 'BLANC.*') ~ 2,
+        str_detect(ETNIA_RESC, 'IND.*GENA|INDÍGENA') ~ 3, 
+        str_detect(ETNIA_RESC, 'MESTIZ.*') ~ 4,
+        str_detect(ETNIA_RESC, 'MONTUBI.*|MONTUVI.*') ~ 5, 
+        str_detect(ETNIA_RESC, 'MULAT.*') ~ 6,
+        str_detect(ETNIA_RESC, 'NEGR.*') ~ 7, 
+        str_detect(ETNIA_RESC, 'OTR.*') ~ 8,
         str_detect(ETNIA_RESC, 'APLICA') ~ 10,
         str_detect(ETNIA_RESC, 'SABE.*|RESPONDE') | ETNIA_RESC == "" | is.na(ETNIA_RESC) ~ 9, 
         TRUE ~ 9
       ),
       
+      # 🚀 REGLA 2 y 4: NIVEL 2 - NACIONALIDAD (15 Espacios - Exclusiva Indígena)
       iN = case_when(
         iE == 3 ~ case_when(
           str_detect(NAC_RESC, 'ACHUAR') ~ 1, str_detect(NAC_RESC, 'ANDOA') ~ 2, str_detect(NAC_RESC, 'AWA') ~ 3,
@@ -116,10 +122,12 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
           str_detect(NAC_RESC, 'HUANCAVILCA') ~ 7, str_detect(NAC_RESC, 'KICHWA|QUICHUA') ~ 8, str_detect(NAC_RESC, 'SECOYA') ~ 9,
           str_detect(NAC_RESC, 'SHIWIAR') ~ 10, str_detect(NAC_RESC, 'SHUAR') ~ 11, str_detect(NAC_RESC, 'TS.*CHILA') ~ 12,
           str_detect(NAC_RESC, 'WAORANI|HUAORANI') ~ 13, str_detect(NAC_RESC, 'ZAPARA') ~ 14, 
-          TRUE ~ 15
-        ), TRUE ~ -1 
+          TRUE ~ 15 # Vacíos y "No Sabe/Responde" Exclusivos de Indígenas
+        ), 
+        TRUE ~ -1 # Amputación Estricta de Mestizos, Blancos, etc.
       ),
       
+      # 🚀 REGLA 2, 3 y 5: NIVEL 3 - PUEBLO (19 Espacios - Independiente)
       iP = case_when(
         iE == 3 ~ case_when(
           tiene_pueblo & !es_pueblo_huancavilca ~ case_when(
@@ -128,11 +136,13 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
             str_detect(PUE_RAW, 'KITUKARA|QUITUCARA') ~ 8, str_detect(PUE_RAW, 'NATABUELA') ~ 9, str_detect(PUE_RAW, 'OTAVALO') ~ 10,
             str_detect(PUE_RAW, 'PALTAS') ~ 11, str_detect(PUE_RAW, 'PANZALEO') ~ 12, str_detect(PUE_RAW, 'PASTOS') ~ 13,
             str_detect(PUE_RAW, 'PURUH.*') ~ 14, str_detect(PUE_RAW, 'SALASA.*') ~ 15, str_detect(PUE_RAW, 'SARAGURO') ~ 16,
-            str_detect(PUE_RAW, 'TOMABELA') ~ 17, str_detect(PUE_RAW, 'WARAMKA|GUARANCA') ~ 18, TRUE ~ 19
+            str_detect(PUE_RAW, 'TOMABELA') ~ 17, str_detect(PUE_RAW, 'WARAMKA|GUARANCA') ~ 18, 
+            TRUE ~ 19
           ),
           es_pueblo_huancavilca ~ 2,
-          TRUE ~ 19
-        ), TRUE ~ -1 
+          TRUE ~ 19 # Vacíos y "No Sabe/Responde" Exclusivos de Indígenas
+        ), 
+        TRUE ~ -1 # Amputación Estricta de Mestizos, Blancos, etc.
       )
     ) %>%
     filter(idx_gen > 0 & fCie > 0)
@@ -151,9 +161,11 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
       fC <- fila$fCie
       gI <- fila$idx_gen - 1 # 0: H, 1: M, 2: LGBTI
       
+      # 🚀 ETNIA SIEMPRE SUMA
       cE <- (fila$iE - 1) * 3 + gI + 1
       matriz_gigante[fC, cE] <- matriz_gigante[fC, cE] + 1
       
+      # 🚀 NACIONALIDAD Y PUEBLO SOLO SUMAN SI SON INDÍGENAS (Evita Ghost Data)
       if (fila$iN != -1) {
         cN <- 30 + (fila$iN - 1) * 3 + gI + 1
         matriz_gigante[fC, cN] <- matriz_gigante[fC, cN] + 1
@@ -182,5 +194,5 @@ trabajador12_Violencia <- function(tabla_consolidada, id_google_sheet, mes_objet
     reformat = FALSE
   )
   
-  cat("✅ Trabajador 12 finalizado. Matriz Inmaculada (132 Cols, Escudo SOGIESC) registrada en la nube.\n")
+  cat("✅ Trabajador 12 finalizado. Matriz Inmaculada (132 Cols, Sub-Universo Indígena y Escudo SOGIESC) registrada en la nube.\n")
 }
