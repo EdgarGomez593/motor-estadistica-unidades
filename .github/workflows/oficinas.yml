@@ -1,0 +1,33 @@
+name: 🏢 Motor Oficinas Técnicas
+
+on:
+  repository_dispatch:
+    types: [ejecutar_oficinas]
+
+jobs:
+  procesar_datos:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - name: 📥 Clonar el repositorio
+        uses: actions/checkout@v3
+
+      - name: ⚙️ Instalar R
+        uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: '4.3.0'
+
+      - name: 📦 Restaurar caché de paquetes
+        uses: actions/cache@v3
+        with:
+          path: /opt/R/4.3.0/lib/R/library
+          key: Linux-paquetes-r
+
+      - name: 🚀 Encender el Motor R (Oficinas Técnicas)
+        env:
+          GCP_CREDENTIALS: ${{ secrets.GCP_CREDENTIALS }}
+          MODO_EJECUCION: ${{ github.event.client_payload.modo_ejecucion }}
+          ID_CARPETA: ${{ github.event.client_payload.id_carpeta }}
+          ID_SHEET: ${{ github.event.client_payload.id_sheet }}
+        run: Rscript principal_oficinas.R
