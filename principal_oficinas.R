@@ -24,7 +24,7 @@ if (llave_json != "") {
 }
 
 # ====================================================================================
-# 2. CONTRATACIÓN DE TRABAJADORES (Los mismos Navy SEALs)
+# 2. CONTRATACIÓN DE TRABAJADORES
 # ====================================================================================
 source("trabajadores/trabajador1_embarazadas.R")
 source("trabajadores/trabajador2_general.R")
@@ -44,7 +44,7 @@ source("trabajadores/trabajador14_Top10Intercultural.R")
 source("trabajadores/trabajador15_SaludMental.R")
 
 # ====================================================================================
-# 3. FUNCIÓN MAESTRA (DIRECTOR DE COSECHA PROFUNDA)
+# 3. FUNCIÓN MAESTRA
 # ====================================================================================
 ejecutar_sala_oficinas <- function() {
   
@@ -78,7 +78,7 @@ ejecutar_sala_oficinas <- function() {
       cat("📍 MODO NORMAL: Buscando el año actual:", anio_buscado, "\n")
     }
     
-    # --- C. ESCÁNER PROFUNDO DE UNIDADES (EXCLUSIVO PARA OT) ---
+    # --- C. ESCÁNER PROFUNDO DE UNIDADES ---
     cat("🏢 Iniciando Cosecha Profunda en la carpeta 'UNIDADES'...\n")
     carpetas_unidades <- drive_ls(as_id(id_carpeta_raiz), type = "folder")
     inventario_meses <- list()
@@ -169,15 +169,17 @@ ejecutar_sala_oficinas <- function() {
         archivo_actual <- archivos_del_mes[i, ]
         nombre_temporal <- paste0("archivo_temp_", i, ".csv")
         
-        # 🛡️ BLOQUE CEREBRAL BILINGÜE Y DE CUARENTENA
         tryCatch({
           suppressMessages(drive_download(as_id(archivo_actual$id), path = nombre_temporal, overwrite = TRUE))
           
-          # Lector Inteligente
+          # Lector Inteligente Bilingüe
           primera_linea <- readLines(nombre_temporal, n = 1, warn = FALSE)
           separador_real <- if (grepl(";", primera_linea)) ";" else ","
           
-          datos_temp <- read.csv(nombre_temporal, sep = separador_real, fileEncoding = "latin1")
+          # 🛡️ BLINDAJE DE TIPOS DE DATOS: Convertir todo a texto puro al instante
+          datos_temp <- read.csv(nombre_temporal, sep = separador_real, fileEncoding = "latin1") %>%
+                        mutate(across(everything(), as.character))
+          
           cubeta_de_datos[[length(cubeta_de_datos) + 1]] <- datos_temp
           
         }, error = function(e) {
@@ -219,14 +221,16 @@ ejecutar_sala_oficinas <- function() {
             for (j in 1:nrow(archs_rescate)) {
               nom_temp <- paste0("temp_res_", m_rescate, "_", j, ".csv")
               
-              # 🛡️ SEGUNDO BLOQUE BILINGÜE PARA DATOS HISTÓRICOS
               tryCatch({
                 suppressMessages(drive_download(as_id(archs_rescate$id[j]), path = nom_temp, overwrite = TRUE))
                 
                 primera_linea_res <- readLines(nom_temp, n = 1, warn = FALSE)
                 separador_res <- if (grepl(";", primera_linea_res)) ";" else ","
                 
-                datos_res <- read.csv(nom_temp, sep = separador_res, fileEncoding = "latin1")
+                # 🛡️ BLINDAJE DE TIPOS DE DATOS HISTÓRICOS
+                datos_res <- read.csv(nom_temp, sep = separador_res, fileEncoding = "latin1") %>%
+                             mutate(across(everything(), as.character))
+                             
                 cub_temp[[length(cub_temp) + 1]] <- datos_res
               }, error = function(e) {
                 cat("\n   ⚠️ ALERTA HISTÓRICA: Archivo rescatado falló. Detalle:", e$message, "\n")
