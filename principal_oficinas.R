@@ -86,7 +86,6 @@ ejecutar_sala_oficinas <- function() {
     for (u in 1:nrow(carpetas_unidades)) {
       cat(" -> Inspeccionando Unidad:", carpetas_unidades$name[u], "\n")
       
-      # Escudos Anti-Caídas para proteger el ciclo si una unidad borró sus carpetas
       sub_pras <- tryCatch(drive_ls(as_id(carpetas_unidades$id[u]), type = "folder") %>% filter(name == "PRAS"), error = function(e) NULL)
       
       if (!is.null(sub_pras) && nrow(sub_pras) > 0) {
@@ -169,9 +168,24 @@ ejecutar_sala_oficinas <- function() {
       for (i in 1:nrow(archivos_del_mes)) {
         archivo_actual <- archivos_del_mes[i, ]
         nombre_temporal <- paste0("archivo_temp_", i, ".csv")
-        suppressMessages(drive_download(as_id(archivo_actual$id), path = nombre_temporal, overwrite = TRUE))
-        cubeta_de_datos[[i]] <- read.csv(nombre_temporal, sep = ",", fileEncoding = "latin1")
+        
+        # 🛡️ BLOQUE CEREBRAL BILINGÜE Y DE CUARENTENA
+        tryCatch({
+          suppressMessages(drive_download(as_id(archivo_actual$id), path = nombre_temporal, overwrite = TRUE))
+          
+          # Lector Inteligente
+          primera_linea <- readLines(nombre_temporal, n = 1, warn = FALSE)
+          separador_real <- if (grepl(";", primera_linea)) ";" else ","
+          
+          datos_temp <- read.csv(nombre_temporal, sep = separador_real, fileEncoding = "latin1")
+          cubeta_de_datos[[length(cubeta_de_datos) + 1]] <- datos_temp
+          
+        }, error = function(e) {
+          cat("\n   ⚠️ ALERTA DE DATO SUCIO: El archivo [", archivo_actual$name, "] falló. Se omitirá. Detalle:", e$message, "\n")
+        })
       }
+      
+      if(length(cubeta_de_datos) == 0) stop("Todos los archivos CSV de este mes están corruptos o vacíos.")
       
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
       cat("✅ Registros listos para mes", mes_objetivo, ":", nrow(base_mensual_consolidada), "\n")
@@ -197,7 +211,6 @@ ejecutar_sala_oficinas <- function() {
       # Radar Trimestral Trabajador 14
       if (modo == "ultimo" && mes_objetivo %in% c(3, 6, 9, 12)) {
         cat("\n📡 RADAR TRIMESTRAL ACTIVADO...\n")
-        # El algoritmo de memoria buscará localmente en inventario_meses
         meses_a_rescatar <- c(mes_objetivo - 2, mes_objetivo - 1)
         for (m_rescate in meses_a_rescatar) {
           archs_rescate <- inventario_meses[[as.character(m_rescate)]]
@@ -205,10 +218,24 @@ ejecutar_sala_oficinas <- function() {
             cub_temp <- list()
             for (j in 1:nrow(archs_rescate)) {
               nom_temp <- paste0("temp_res_", m_rescate, "_", j, ".csv")
-              suppressMessages(drive_download(as_id(archs_rescate$id[j]), path = nom_temp, overwrite = TRUE))
-              cub_temp[[j]] <- read.csv(nom_temp, sep = ",", fileEncoding = "latin1")
+              
+              # 🛡️ SEGUNDO BLOQUE BILINGÜE PARA DATOS HISTÓRICOS
+              tryCatch({
+                suppressMessages(drive_download(as_id(archs_rescate$id[j]), path = nom_temp, overwrite = TRUE))
+                
+                primera_linea_res <- readLines(nom_temp, n = 1, warn = FALSE)
+                separador_res <- if (grepl(";", primera_linea_res)) ";" else ","
+                
+                datos_res <- read.csv(nom_temp, sep = separador_res, fileEncoding = "latin1")
+                cub_temp[[length(cub_temp) + 1]] <- datos_res
+              }, error = function(e) {
+                cat("\n   ⚠️ ALERTA HISTÓRICA: Archivo rescatado falló. Detalle:", e$message, "\n")
+              })
+              
             }
-            memoria_historica_trimestral[[as.character(m_rescate)]] <- bind_rows(cub_temp)
+            if(length(cub_temp) > 0) {
+              memoria_historica_trimestral[[as.character(m_rescate)]] <- bind_rows(cub_temp)
+            }
           }
         }
         indices_ordenados <- sort(as.numeric(names(memoria_historica_trimestral)))
