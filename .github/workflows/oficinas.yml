@@ -12,6 +12,11 @@ jobs:
     steps:
       - name: 📥 Clonar el repositorio
         uses: actions/checkout@v3
+        
+      - name: ⚙️ Instalar dependencias de Ubuntu
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
 
       - name: ⚙️ Instalar R
         uses: r-lib/actions/setup-r@v2
@@ -23,6 +28,13 @@ jobs:
         with:
           path: /opt/R/4.3.0/lib/R/library
           key: Linux-paquetes-r
+
+      - name: 🛠️ Instalar librerías de R (Si no están en memoria)
+        run: |
+          Rscript -e "if (!require('googledrive')) install.packages('googledrive', repos='http://cran.rstudio.com/')"
+          Rscript -e "if (!require('googlesheets4')) install.packages('googlesheets4', repos='http://cran.rstudio.com/')"
+          Rscript -e "if (!require('dplyr')) install.packages('dplyr', repos='http://cran.rstudio.com/')"
+          Rscript -e "if (!require('stringr')) install.packages('stringr', repos='http://cran.rstudio.com/')"
 
       - name: 🚀 Encender el Motor R (Oficinas Técnicas)
         env:
