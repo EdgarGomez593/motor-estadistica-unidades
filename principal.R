@@ -8,6 +8,37 @@ library(dplyr)
 library(stringr)
 
 # ====================================================================================
+# 0. MOTOR LECTOR INTELIGENTE (Tolerancia a Comas y Puntos y Comas)
+# ====================================================================================
+# Este escáner reemplaza al "read.csv" tradicional. Detecta la estructura del
+# archivo antes de abrirlo, previniendo los colapsos de memoria en GitHub.
+leer_csv_inteligente <- function(ruta_archivo, max_lineas_prueba = 5) {
+  # Extraemos una muestra del archivo sin saturar la memoria RAM
+  lineas_prueba <- readLines(ruta_archivo, n = max_lineas_prueba, warn = FALSE)
+  
+  if (length(lineas_prueba) == 0) stop("El archivo está vacío o dañado.")
+  
+  # Usamos la primera fila (encabezados) para decidir
+  primera_linea <- lineas_prueba[1]
+  
+  conteo_comas <- nchar(gsub("[^,]", "", primera_linea))
+  conteo_puntos_comas <- nchar(gsub("[^;]", "", primera_linea))
+  
+  cat(sprintf("   [Escáner] Comas detectadas: %d | Puntos y Comas detectados: %d\n", conteo_comas, conteo_puntos_comas))
+  
+  if (conteo_puntos_comas > conteo_comas) {
+    cat("   [✓] Formato Latino detectado (;). Configurando motor read.csv2...\n")
+    # read.csv2 asume separador ';' y decimal ',' por defecto en R
+    datos <- read.csv2(ruta_archivo, fileEncoding = "latin1", stringsAsFactors = FALSE)
+  } else {
+    cat("   [✓] Formato Universal detectado (,). Configurando motor read.csv...\n")
+    datos <- read.csv(ruta_archivo, fileEncoding = "latin1", stringsAsFactors = FALSE)
+  }
+  
+  return(datos)
+}
+
+# ====================================================================================
 # 1. AUTENTICACIÓN INTELIGENTE (Cédula Robótica para GitHub)
 # ====================================================================================
 llave_json <- Sys.getenv("GCP_CREDENTIALS")
@@ -185,7 +216,9 @@ ejecutar_sala_situacional_maestra <- function() {
         archivo_actual <- archivos_del_mes[i, ]
         nombre_temporal <- paste0("archivo_temp_", i, ".csv")
         suppressMessages(drive_download(as_id(archivo_actual$id), path = nombre_temporal, overwrite = TRUE))
-        cubeta_de_datos[[i]] <- read.csv(nombre_temporal, sep = ",", fileEncoding = "latin1")
+        
+        # [INYECCIÓN SENIOR]: Usamos el Motor Lector Inteligente en lugar del ciego read.csv
+        cubeta_de_datos[[i]] <- leer_csv_inteligente(nombre_temporal)
       }
       
       base_mensual_consolidada <- bind_rows(cubeta_de_datos)
@@ -233,7 +266,9 @@ ejecutar_sala_situacional_maestra <- function() {
               arch <- item_r$archivos[j, ]
               nom_temp <- paste0("temp_rescate_", m_rescate, "_", j, ".csv")
               suppressMessages(drive_download(as_id(arch$id), path = nom_temp, overwrite = TRUE))
-              cubeta_temp[[j]] <- read.csv(nom_temp, sep = ",", fileEncoding = "latin1")
+              
+              # [INYECCIÓN SENIOR]: Escáner aplicado también al rescate trimestral
+              cubeta_temp[[j]] <- leer_csv_inteligente(nom_temp)
             }
             # Guardamos con nombre explícito ("mes_X") para evitar NULLs en R
             memoria_historica_trimestral[[as.character(m_rescate)]] <- bind_rows(cubeta_temp)
