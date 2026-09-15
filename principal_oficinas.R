@@ -207,33 +207,42 @@ ejecutar_sala_oficinas <- function() {
       ejecutar_escudo(trabajador14_Top10Intercultural, "T14_Top10Intercultural", base_mensual_consolidada, id_google_sheet, mes_objetivo)
       ejecutar_escudo(trabajador15_SaludMental, "T15_SaludMental", base_mensual_consolidada, id_google_sheet, mes_objetivo)
       
-      # --- G. RADAR TRIMESTRAL PARA TRABAJADOR 14 ---
-      if (modo == "ultimo" && mes_objetivo %in% c(3, 6, 9, 12)) {
-        cat("\n📡 RADAR TRIMESTRAL ACTIVADO: Detectado mes de cierre. Rescatando historial...\n")
-        meses_a_rescatar <- c(mes_objetivo - 2, mes_objetivo - 1)
-        for (m_rescate in meses_a_rescatar) {
-          archs_rescate <- inventario_meses[[as.character(m_rescate)]]
-          if (!is.null(archs_rescate)) {
-            cub_temp <- list()
-            for (j in 1:nrow(archs_rescate)) {
-              nom_temp <- paste0("temp_res_", m_rescate, "_", j, ".csv")
-              tryCatch({
-                suppressMessages(drive_download(as_id(archs_rescate$id[j]), path = nom_temp, overwrite = TRUE))
-                primera_linea_res <- readLines(nom_temp, n = 1, warn = FALSE)
-                separador_res <- if (grepl(";", primera_linea_res)) ";" else ","
-                
-                datos_res <- read.csv(nom_temp, sep = separador_res, fileEncoding = "latin1") %>%
-                             mutate(across(everything(), as.character))
-                cub_temp[[length(cub_temp) + 1]] <- datos_res
-              }, error = function(e) {
-                cat("\n   ⚠️ ALERTA HISTÓRICA: Archivo rescatado falló. Detalle:", e$message, "\n")
-              })
-            }
-            if(length(cub_temp) > 0) {
-              memoria_historica_trimestral[[as.character(m_rescate)]] <- bind_rows(cub_temp)
+# --- G. RADAR TRIMESTRAL PARA TRABAJADOR 14 (ARQUITECTURA CORREGIDA) ---
+      if (mes_objetivo %in% c(3, 6, 9, 12)) {
+        cat("\n📡 BÓVEDA TRIMESTRAL DETECTADA: Procesando consolidado de cierre...\n")
+        
+        # Solo necesitamos descargar del pasado si estamos corriendo de un mes en un mes ("ultimo")
+        if (modo == "ultimo") {
+          cat("   -> MODO ÚLTIMO: Rescatando historial de los 2 meses anteriores desde Google Drive...\n")
+          meses_a_rescatar <- c(mes_objetivo - 2, mes_objetivo - 1)
+          for (m_rescate in meses_a_rescatar) {
+            archs_rescate <- inventario_meses[[as.character(m_rescate)]]
+            if (!is.null(archs_rescate)) {
+              cub_temp <- list()
+              for (j in 1:nrow(archs_rescate)) {
+                nom_temp <- paste0("temp_res_", m_rescate, "_", j, ".csv")
+                tryCatch({
+                  suppressMessages(drive_download(as_id(archs_rescate$id[j]), path = nom_temp, overwrite = TRUE))
+                  primera_linea_res <- readLines(nom_temp, n = 1, warn = FALSE)
+                  separador_res <- if (grepl(";", primera_linea_res)) ";" else ","
+                  
+                  datos_res <- read.csv(nom_temp, sep = separador_res, fileEncoding = "latin1") %>%
+                               mutate(across(everything(), as.character))
+                  cub_temp[[length(cub_temp) + 1]] <- datos_res
+                }, error = function(e) {
+                  cat("\n   ⚠️ ALERTA HISTÓRICA: Archivo rescatado falló. Detalle:", e$message, "\n")
+                })
+              }
+              if(length(cub_temp) > 0) {
+                memoria_historica_trimestral[[as.character(m_rescate)]] <- bind_rows(cub_temp)
+              }
             }
           }
+        } else {
+          cat("   -> MODO AÑO COMPLETO: Historial ya disponible en la memoria caché RAM.\n")
         }
+        
+        # Tanto en "Año Completo" como en "Último", extraemos la memoria y disparamos al Trabajador
         indices_ordenados <- sort(as.numeric(names(memoria_historica_trimestral)))
         memoria_ordenada <- lapply(as.character(indices_ordenados), function(nm) memoria_historica_trimestral[[nm]])
         
