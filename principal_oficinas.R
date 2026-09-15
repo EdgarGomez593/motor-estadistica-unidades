@@ -1,5 +1,5 @@
 # ====================================================================================
-# CEREBRO CENTRAL - NODO OFICINAS TÉCNICAS (COSECHA PROFUNDA DISTRIBUIDA)
+# CEREBRO CENTRAL - NODO OFICINAS TÉCNICAS (CON RADAR TRIMESTRAL RESTAURADO)
 # ====================================================================================
 
 library(googledrive)
@@ -57,7 +57,6 @@ ejecutar_sala_oficinas <- function() {
     if(modo_original == "") modo_original <- "ultimo"
     if(id_carpeta_raiz == "") stop("Falta el ID de la carpeta 'UNIDADES'.")
     
-    # --- B. LÓGICA DE TIEMPO ---
     modo <- modo_original
     anio_auditoria <- ""
     mes_especifico <- ""
@@ -85,7 +84,6 @@ ejecutar_sala_oficinas <- function() {
     
     for (u in 1:nrow(carpetas_unidades)) {
       cat(" -> Inspeccionando Unidad:", carpetas_unidades$name[u], "\n")
-      
       sub_pras <- tryCatch(drive_ls(as_id(carpetas_unidades$id[u]), type = "folder") %>% filter(name == "PRAS"), error = function(e) NULL)
       
       if (!is.null(sub_pras) && nrow(sub_pras) > 0) {
@@ -100,7 +98,6 @@ ejecutar_sala_oficinas <- function() {
               
               if (!is.null(archivos_csv) && nrow(archivos_csv) > 0) {
                 mes_num <- as.numeric(str_extract(carpetas_meses$name[m], "^\\d+"))
-                
                 if (!is.na(mes_num)) {
                   if (is.null(inventario_meses[[as.character(mes_num)]])) {
                     inventario_meses[[as.character(mes_num)]] <- archivos_csv
@@ -115,7 +112,7 @@ ejecutar_sala_oficinas <- function() {
       }
     }
     
-    # --- D. FILTROS DE TIEMPO Y CONSOLIDACIÓN ---
+    # --- D. FILTROS DE TIEMPO ---
     lista_archivos_validos <- list()
     meses_encontrados <- as.numeric(names(inventario_meses))
     
@@ -130,7 +127,7 @@ ejecutar_sala_oficinas <- function() {
       }
     }
     
-    if(length(lista_archivos_validos) == 0) stop("No se encontraron datos CSV válidos en las unidades.")
+    if(length(lista_archivos_validos) == 0) stop("No se encontraron datos CSV válidos.")
     
     if (mes_especifico != "" && mes_especifico != "todos") {
       lista_archivos_validos <- lista_archivos_validos[sapply(lista_archivos_validos, function(x) x$mes_numero == as.numeric(mes_especifico))]
@@ -172,18 +169,17 @@ ejecutar_sala_oficinas <- function() {
         tryCatch({
           suppressMessages(drive_download(as_id(archivo_actual$id), path = nombre_temporal, overwrite = TRUE))
           
-          # Lector Inteligente Bilingüe
+          # Lector Inteligente Bilingüe y de Textos
           primera_linea <- readLines(nombre_temporal, n = 1, warn = FALSE)
           separador_real <- if (grepl(";", primera_linea)) ";" else ","
           
-          # 🛡️ BLINDAJE DE TIPOS DE DATOS: Convertir todo a texto puro al instante
           datos_temp <- read.csv(nombre_temporal, sep = separador_real, fileEncoding = "latin1") %>%
                         mutate(across(everything(), as.character))
           
           cubeta_de_datos[[length(cubeta_de_datos) + 1]] <- datos_temp
           
         }, error = function(e) {
-          cat("\n   ⚠️ ALERTA DE DATO SUCIO: El archivo [", archivo_actual$name, "] falló. Se omitirá. Detalle:", e$message, "\n")
+          cat("\n   ⚠️ ALERTA DE DATO SUCIO: El archivo [", archivo_actual$name, "] falló. Detalle:", e$message, "\n")
         })
       }
       
@@ -193,26 +189,27 @@ ejecutar_sala_oficinas <- function() {
       cat("✅ Registros listos para mes", mes_objetivo, ":", nrow(base_mensual_consolidada), "\n")
       memoria_historica_trimestral[[as.character(mes_objetivo)]] <- base_mensual_consolidada
       
-      # Ejecución de los 15 Trabajadores
-      ejecutar_escudo(trabajador1_Embarazadas, "T1", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador2_General, "T2", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador3_Edades, "T3", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador4_LugarAtencion, "T4", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador5_MorbilidadPrevencion, "T5", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador6_CronicasCIE10, "T6", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador6_1_CronicasGenero, "T6_1", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador7_CoberturaAtenciones, "T7", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador8_InterculturalidadTotal, "T8", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador9_PerfilEpidemiologico, "T9", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador10_Discapacidades, "T10", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador11_EstadoNutricional, "T11", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador12_Violencia, "T12", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador13_AdolescentesRiesgo, "T13", base_mensual_consolidada, id_google_sheet, mes_objetivo)
-      ejecutar_escudo(trabajador15_SaludMental, "T15", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      # Ejecución Mensual
+      ejecutar_escudo(trabajador1_Embarazadas, "T1_Embarazadas", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador2_General, "T2_General", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador3_Edades, "T3_Edades", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador4_LugarAtencion, "T4_LugarAtencion", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador5_MorbilidadPrevencion, "T5_MorbilidadPrevencion", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador6_CronicasCIE10, "T6_CronicasCIE10", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador6_1_CronicasGenero, "T6_1_CronicasGenero", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador7_CoberturaAtenciones, "T7_CoberturaAtenciones", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador8_InterculturalidadTotal, "T8_Interculturalidad", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador9_PerfilEpidemiologico, "T9_PerfilEpidemiologico", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador10_Discapacidades, "T10_Discapacidades", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador11_EstadoNutricional, "T11_EstadoNutricional", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador12_Violencia, "T12_Violencia", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador13_AdolescentesRiesgo, "T13_AdolescentesRiesgo", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador14_Top10Intercultural, "T14_Top10Intercultural", base_mensual_consolidada, id_google_sheet, mes_objetivo)
+      ejecutar_escudo(trabajador15_SaludMental, "T15_SaludMental", base_mensual_consolidada, id_google_sheet, mes_objetivo)
       
-      # Radar Trimestral Trabajador 14
+      # --- G. RADAR TRIMESTRAL PARA TRABAJADOR 14 ---
       if (modo == "ultimo" && mes_objetivo %in% c(3, 6, 9, 12)) {
-        cat("\n📡 RADAR TRIMESTRAL ACTIVADO...\n")
+        cat("\n📡 RADAR TRIMESTRAL ACTIVADO: Detectado mes de cierre. Rescatando historial...\n")
         meses_a_rescatar <- c(mes_objetivo - 2, mes_objetivo - 1)
         for (m_rescate in meses_a_rescatar) {
           archs_rescate <- inventario_meses[[as.character(m_rescate)]]
@@ -220,22 +217,17 @@ ejecutar_sala_oficinas <- function() {
             cub_temp <- list()
             for (j in 1:nrow(archs_rescate)) {
               nom_temp <- paste0("temp_res_", m_rescate, "_", j, ".csv")
-              
               tryCatch({
                 suppressMessages(drive_download(as_id(archs_rescate$id[j]), path = nom_temp, overwrite = TRUE))
-                
                 primera_linea_res <- readLines(nom_temp, n = 1, warn = FALSE)
                 separador_res <- if (grepl(";", primera_linea_res)) ";" else ","
                 
-                # 🛡️ BLINDAJE DE TIPOS DE DATOS HISTÓRICOS
                 datos_res <- read.csv(nom_temp, sep = separador_res, fileEncoding = "latin1") %>%
                              mutate(across(everything(), as.character))
-                             
                 cub_temp[[length(cub_temp) + 1]] <- datos_res
               }, error = function(e) {
                 cat("\n   ⚠️ ALERTA HISTÓRICA: Archivo rescatado falló. Detalle:", e$message, "\n")
               })
-              
             }
             if(length(cub_temp) > 0) {
               memoria_historica_trimestral[[as.character(m_rescate)]] <- bind_rows(cub_temp)
@@ -244,7 +236,8 @@ ejecutar_sala_oficinas <- function() {
         }
         indices_ordenados <- sort(as.numeric(names(memoria_historica_trimestral)))
         memoria_ordenada <- lapply(as.character(indices_ordenados), function(nm) memoria_historica_trimestral[[nm]])
-        ejecutar_escudo(trabajador14_Top10Intercultural, "T14", base_mensual_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = memoria_ordenada)
+        
+        ejecutar_escudo(trabajador14_Top10Intercultural, "T14_Top10Intercultural (Trimestre)", base_mensual_consolidada, id_google_sheet, mes_objetivo, cubeta_completa = memoria_ordenada)
       }
     }
     
