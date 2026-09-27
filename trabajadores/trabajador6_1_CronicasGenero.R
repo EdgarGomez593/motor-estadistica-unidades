@@ -46,7 +46,7 @@ trabajador6_1_CronicasGenero <- function(tabla_consolidada, id_google_sheet, mes
   base_identificada <- base_limpia %>%
     mutate(
       esHTA = str_starts(CIE, "I10"),
-      esOB = str_starts(CIE, "E669"),
+      esOB = str_starts(CIE, "E66[01289]"),
       esDiabetes = str_starts(CIE, "E10|E11|E12|E13|E14"),
       esCancer = str_starts(CIE, codigos_cancer),
       
