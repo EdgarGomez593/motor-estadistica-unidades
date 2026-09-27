@@ -14,8 +14,6 @@ trabajador5_MorbilidadPrevencion <- function(tabla_consolidada, id_google_sheet,
   letras_columnas <- c("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M")
   letra_col <- letras_columnas[col_destino_num]
   
-  # Catálogo Exacto
-  condiciones_morbi <- c("DEFINITIVO INICIAL", "DEFINITIVO INICIAL CONFIRMADO POR LABORATORIO", "DEFINITIVO INICIAL CONFIRMADO")
   
   # Tolerancia para el nombre de la columna en el CSV
   nombres_cols <- names(tabla_consolidada)
@@ -60,10 +58,10 @@ trabajador5_MorbilidadPrevencion <- function(tabla_consolidada, id_google_sheet,
   
   # 3. Conteos Finales (Aritmética Booleana de Alta Velocidad)
   pre_med <- sum(str_detect(b_med$TIP, "PREV"), na.rm = TRUE)
-  mor_med <- sum(b_med$TIP == "MORBILIDAD" & b_med$CON %in% condiciones_morbi, na.rm = TRUE)
+  mor_med <- sum(b_med$TIP == "MORBILIDAD", na.rm = TRUE) # <-- Candado eliminado
   
   pre_odo <- sum(str_detect(b_odo$TIP, "PREV"), na.rm = TRUE)
-  mor_odo <- sum(b_odo$TIP == "MORBILIDAD" & b_odo$CON %in% condiciones_morbi, na.rm = TRUE)
+  mor_odo <- sum(b_odo$TIP == "MORBILIDAD", na.rm = TRUE) # <-- Candado eliminado
   
   cat("   -> Médicos/Obst/Psicólogos | Prevención:", pre_med, "| Morbilidad:", mor_med, "\n")
   cat("   -> Odontología       | Prevención:", pre_odo, "| Morbilidad:", mor_odo, "\n")
