@@ -55,7 +55,7 @@ trabajador5_MorbilidadPrevencion <- function(tabla_consolidada, id_google_sheet,
   # Esto garantiza que el motor no discrimine a los médicos por culpa de tildes o variaciones 
   # en los registros ("MÉDICO", "MEDICO", "MEDICINA", "OBSTETRA"), manteniendo la lógica exacta 
   # y estricta de cómo se quieren los datos.
-  b_med <- base_primera %>% filter(str_detect(ESP, "MEDICIN|M.*DIC|OBSTETR"))
+  b_med <- base_primera %>% filter(str_detect(ESP, "MEDICIN|M.*DIC|OBSTETR|GINECOLOG|PSICOLOG"))
   b_odo <- base_primera %>% filter(str_detect(ESP, "ODONTO"))
   
   # 3. Conteos Finales (Aritmética Booleana de Alta Velocidad)
@@ -65,7 +65,7 @@ trabajador5_MorbilidadPrevencion <- function(tabla_consolidada, id_google_sheet,
   pre_odo <- sum(str_detect(b_odo$TIP, "PREV"), na.rm = TRUE)
   mor_odo <- sum(b_odo$TIP == "MORBILIDAD" & b_odo$CON %in% condiciones_morbi, na.rm = TRUE)
   
-  cat("   -> Médicos/Obstetras | Prevención:", pre_med, "| Morbilidad:", mor_med, "\n")
+  cat("   -> Médicos/Obst/Psicólogos | Prevención:", pre_med, "| Morbilidad:", mor_med, "\n")
   cat("   -> Odontología       | Prevención:", pre_odo, "| Morbilidad:", mor_odo, "\n")
   
   # =========================================================================
